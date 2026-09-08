@@ -1,0 +1,953 @@
+/* ==========================================================================
+   MINIMAL CHESS — Master Stylesheet
+   Strict adherence to minimalist-ui and ui-ux-psychology directives:
+   - Warm monochrome canvas (#fdfdfd)
+   - Seamless, borderless board (no checkered tiles)
+   - Soft pastel blue move highlights (#dbeafe)
+   - Centered move dots & capture rings
+   - Turn-based auto-flip 180° rotation
+   - Responsive layout for phone & laptop
+   ========================================================================== */
+
+:root {
+  --bg-canvas: #fdfdfd;
+  --surface-card: #ffffff;
+  --border-light: #eaeaea;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --text-primary: #1a1a1a;
+  --text-secondary: #787774;
+  --text-muted: #9e9e9e;
+  
+  --highlight-blue: #dbeafe; /* RGB(219, 234, 254) from screenshot 3 */
+  --highlight-blue-active: #bfdbfe;
+  --dot-color: #b4b4b4;      /* Soft grey from screenshot 2 */
+  --check-color: rgba(239, 68, 68, 0.28);
+  
+  --piece-black: #262626;
+  --piece-white: #a8a8a8;
+  
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Geist Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Geist Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  
+  --board-size: min(86vw, 440px);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --board-size: min(65vh, 520px);
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --board-size: min(70vh, 560px);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+body {
+  font-family: var(--font-ui);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+  touch-action: manipulation;
+}
+
+/* --------------------------------------------------------------------------
+   App Container & Responsive Layout
+   -------------------------------------------------------------------------- */
+.app-container {
+  width: 100%;
+  max-width: 600px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .app-container {
+    min-height: 94vh;
+    padding: 20px 24px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Header Bar
+   -------------------------------------------------------------------------- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.brand-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: #f7f7f6;
+  border-color: #d8d8d8;
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+.icon-svg {
+  width: 18px;
+  height: 18px;
+}
+
+.toggle-pill {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.toggle-pill.active {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
+/* --------------------------------------------------------------------------
+   Player Information Cards (Top & Bottom)
+   -------------------------------------------------------------------------- */
+.game-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+  padding: 8px 0;
+}
+
+.player-card {
+  width: var(--board-size);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: transparent;
+  border-radius: 10px;
+  transition: background 0.25s ease, border-color 0.25s ease;
+  transform: none !important;
+}
+
+.player-card.active-turn {
+  background: rgba(0, 0, 0, 0.025);
+}
+
+.player-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  background: var(--surface-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.player-avatar:hover {
+  border-color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+.player-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.player-name-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transform-origin: center center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.player-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-block;
+  transition: color 0.2s ease;
+}
+
+.btn-edit-name {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.btn-edit-name:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.btn-edit-name svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Captured Tray & Material Score */
+.captured-tray {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+}
+
+.captured-list {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.captured-item {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+}
+
+.captured-item img,
+.captured-item svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.advantage-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #444444;
+  background: #f0f0f0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: none;
+}
+
+.advantage-badge.visible {
+  display: inline-block;
+}
+
+.turn-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: #111111;
+  padding: 4px 9px;
+  border-radius: 9999px;
+  opacity: 0;
+  transform: translateY(2px);
+  transform-origin: center center;
+  transition: opacity 0.25s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.player-card.active-turn .turn-badge {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#player-top.facing-opponent.active-turn .turn-badge {
+  opacity: 1;
+  transform: rotate(180deg);
+}
+
+/* --------------------------------------------------------------------------
+   The Chessboard & Minimal Tiles
+   -------------------------------------------------------------------------- */
+.board-wrapper {
+  width: var(--board-size);
+  height: var(--board-size);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Flipped 180° when board faces Black */
+.board-container.flipped {
+  transform: rotate(180deg);
+}
+
+.board {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  background-color: var(--bg-canvas);
+  position: relative;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Square */
+.square {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Last move pastel blue highlight (from Screenshot 3: #dbeafe) */
+.square.last-move {
+  background-color: var(--highlight-blue) !important;
+}
+
+/* Active selected piece square */
+.square.selected {
+  background-color: var(--highlight-blue);
+}
+
+/* King in check soft red glow */
+.square.in-check {
+  background: radial-gradient(circle, var(--check-color) 0%, rgba(239, 68, 68, 0.08) 65%, transparent 100%) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Move Indicator Dots & Capture Rings
+   -------------------------------------------------------------------------- */
+/* Legal move dot for empty square (Screenshot 2) */
+.playable-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background-color: var(--dot-color);
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  transition: transform 0.15s ease;
+}
+
+.square:hover .playable-dot {
+  transform: scale(1.25);
+}
+
+/* Legal capture ring for square with opponent piece */
+.capture-ring {
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  border: 2.5px solid var(--dot-color);
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  transition: transform 0.15s ease;
+}
+
+.square:hover .capture-ring {
+  transform: scale(1.08);
+}
+
+/* --------------------------------------------------------------------------
+   Chess Pieces
+   -------------------------------------------------------------------------- */
+.chess-piece {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  pointer-events: auto;
+  cursor: grab;
+  position: relative;
+  z-index: 5;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.chess-piece:active {
+  cursor: grabbing;
+}
+
+/* Square selected lift */
+.square.selected .chess-piece {
+  transform: scale(1.08);
+}
+
+/* Pieces rotation when it is Black's turn (pieces face friend on opposite side) */
+#chessboard.pieces-facing-black .chess-piece,
+.board.pieces-facing-black .chess-piece {
+  transform: rotate(180deg);
+}
+
+#chessboard.pieces-facing-black .square.selected .chess-piece,
+.board.pieces-facing-black .square.selected .chess-piece {
+  transform: rotate(180deg) scale(1.08);
+}
+
+/* Counter-rotation for pieces when board is flipped (so pieces stay upright) */
+.board-container.flipped .chess-piece {
+  transform: rotate(180deg);
+}
+
+.board-container.flipped .square.selected .chess-piece {
+  transform: rotate(180deg) scale(1.08);
+}
+
+/* Tabletop Mode: top player pieces face opposite (upside-down for bottom player) */
+.tabletop-mode .top-player-piece {
+  transform: rotate(180deg) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Internal In-Place Flip for Top Player (Pass-and-Play Turn Orientation)
+   Zero whole-card swing: each element flips inside its own boundary!
+   -------------------------------------------------------------------------- */
+#player-top.facing-opponent {
+  transform: none !important;
+}
+
+/* 1. Piece silhouette inside circular avatar rotates 180° in place */
+.player-avatar svg,
+.player-avatar img {
+  transform-origin: center center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+#player-top.facing-opponent .player-avatar svg,
+#player-top.facing-opponent .player-avatar img {
+  transform: rotate(180deg);
+}
+
+/* 2. Player Name & Edit Icon: Clean in-place 180° rotation for opposite player */
+#player-top.facing-opponent .player-name-wrapper {
+  transform: rotate(180deg);
+}
+
+/* 3. Captured Tray mini-icons & Advantage score rotate in place */
+.captured-item {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transform-origin: center center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+#player-top.facing-opponent .captured-item {
+  transform: rotate(180deg);
+}
+
+#player-top.facing-opponent .advantage-badge {
+  transform-origin: center center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: rotate(180deg);
+}
+
+/* Dragging active piece clone */
+.dragging-piece {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  transform: translate(-50%, -50%) scale(1.15);
+  opacity: 0.95;
+  transition: none;
+  will-change: transform, left, top;
+}
+
+/* --------------------------------------------------------------------------
+   Footer Control Bar
+   -------------------------------------------------------------------------- */
+.footer-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 4px 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.control-btn {
+  flex: 1;
+  max-width: 80px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all 0.15s ease;
+}
+
+.control-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.control-btn svg {
+  width: 17px;
+  height: 17px;
+  color: var(--text-secondary);
+}
+
+.control-btn:hover {
+  background: #f7f7f6;
+  border-color: #d8d8d8;
+}
+
+.control-btn:hover svg {
+  color: var(--text-primary);
+}
+
+.control-btn:active {
+  transform: scale(0.96);
+}
+
+.control-btn.active {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
+.control-btn.active svg {
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Modals & Overlays
+   -------------------------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.modal-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+/* Promotion Options */
+.promotion-options {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+
+.promotion-choice {
+  width: 60px;
+  height: 60px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: #fafaf9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 8px;
+}
+
+.promotion-choice:hover {
+  border-color: var(--text-primary);
+  background: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.promotion-choice img,
+.promotion-choice svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Game Over Celebration Card */
+.celebration-card {
+  padding: 32px 24px;
+}
+
+.winner-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  background: #f7f7f6;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-over-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.game-over-winner {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.game-over-stats {
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+  padding: 14px 0;
+  margin-bottom: 24px;
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn-primary {
+  flex: 1;
+  background: #111111;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: #2a2a2a;
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-secondary {
+  flex: 1;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background: #f7f7f6;
+}
+
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+/* Avatar Grid */
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.avatar-choice {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: #fafaf9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 12px;
+  transition: all 0.15s ease;
+}
+
+.avatar-choice:hover {
+  border-color: var(--text-primary);
+  background: #ffffff;
+  transform: scale(1.05);
+}
+
+.avatar-choice.selected {
+  border-color: #111111;
+  background: #f0f0f0;
+}
+
+/* Modal Input */
+.modal-input-wrapper {
+  margin: 16px 0 20px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.modal-input:focus {
+  border-color: var(--text-primary);
+}
+
+/* --------------------------------------------------------------------------
+   Move History Drawer
+   -------------------------------------------------------------------------- */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(2px);
+  z-index: 2500;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer-panel {
+  width: 100%;
+  max-width: 320px;
+  height: 100%;
+  background: var(--surface-card);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 12px;
+}
+
+.drawer-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.history-content {
+  flex: 1;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.history-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: var(--font-ui);
+  margin-top: 20px;
+  text-align: center;
+}
+
+.history-row {
+  display: flex;
+  padding: 6px 4px;
+  border-radius: 4px;
+  transition: background 0.1s ease;
+}
+
+.history-row:hover {
+  background: #f7f7f6;
+}
+
+.history-num {
+  width: 36px;
+  color: var(--text-muted);
+}
+
+.history-move {
+  flex: 1;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Animations
+   -------------------------------------------------------------------------- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
