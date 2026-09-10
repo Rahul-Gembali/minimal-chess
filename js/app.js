@@ -113,10 +113,12 @@
         const file = String.fromCharCode('a'.charCodeAt(0) + c);
         const rank = 8 - r;
         const squareId = `${file}${rank}`;
+        const isLight = (r + c) % 2 === 0;
 
         const sqEl = document.createElement('div');
-        sqEl.className = 'square';
+        sqEl.className = `square ${isLight ? 'light' : 'dark'}`;
         sqEl.dataset.square = squareId;
+        sqEl.dataset.color = isLight ? 'light' : 'dark';
         chessboardEl.appendChild(sqEl);
         squareElements[squareId] = sqEl;
       }
@@ -146,8 +148,10 @@
         const sqEl = squareElements[squareId];
         if (!sqEl) continue;
 
-        // Reset classes
-        sqEl.className = 'square';
+        const isLight = (r + c) % 2 === 0;
+
+        // Reset classes while preserving alternating light/dark square tile
+        sqEl.className = `square ${isLight ? 'light' : 'dark'}`;
         if (lastMove && (lastMove.from === squareId || lastMove.to === squareId)) {
           sqEl.classList.add('last-move');
         }

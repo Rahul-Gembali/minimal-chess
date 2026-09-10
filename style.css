@@ -20,8 +20,11 @@
   
   --highlight-blue: #dbeafe; /* RGB(219, 234, 254) from screenshot 3 */
   --highlight-blue-active: #bfdbfe;
-  --dot-color: #b4b4b4;      /* Soft grey from screenshot 2 */
+  --dot-color: #9e9e9e;      /* Soft grey matching dots */
   --check-color: rgba(239, 68, 68, 0.28);
+  
+  --square-light: #fdfdfd;   /* Light tile from screenshot */
+  --square-dark: #ebebeb;    /* Soft grey tile from screenshot (#ebebeb) */
   
   --piece-black: #262626;
   --piece-white: #a8a8a8;
@@ -366,6 +369,9 @@ body {
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 /* Square */
@@ -385,6 +391,15 @@ body {
   -webkit-user-select: none;
 }
 
+/* Alternating minimal square colors from screenshot */
+.square.light {
+  background-color: var(--square-light);
+}
+
+.square.dark {
+  background-color: var(--square-dark);
+}
+
 /* Last move pastel blue highlight (from Screenshot 3: #dbeafe) */
 .square.last-move {
   background-color: var(--highlight-blue) !important;
@@ -392,7 +407,7 @@ body {
 
 /* Active selected piece square */
 .square.selected {
-  background-color: var(--highlight-blue);
+  background-color: var(--highlight-blue-active) !important;
 }
 
 /* King in check soft red glow */
