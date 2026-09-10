@@ -23,6 +23,7 @@
   const squareElements = {};
 
   // Configuration & Preferences (persisted in localStorage)
+  let currentTheme = localStorage.getItem('minchess_theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   // Board auto-flip is OFF by default; Piece-flip on turn is ON by default
   let autoFlipEnabled = localStorage.getItem('minchess_autoflip_v2') === 'true'; // default false
   let pieceFlipEnabled = localStorage.getItem('minchess_pieceflip_v2') !== 'false'; // default true
@@ -48,6 +49,9 @@
   // DOM Elements
   const chessboardEl = document.getElementById('chessboard');
   const boardContainerEl = document.getElementById('board-container');
+  const btnTheme = document.getElementById('btn-theme');
+  const themeMoonIcon = btnTheme ? btnTheme.querySelector('.theme-moon') : null;
+  const themeSunIcon = btnTheme ? btnTheme.querySelector('.theme-sun') : null;
   const btnAudio = document.getElementById('btn-audio');
   const soundOnIcon = btnAudio.querySelector('.sound-on');
   const soundOffIcon = btnAudio.querySelector('.sound-off');
@@ -93,6 +97,7 @@
 
   // --- Initial Setup ---
   function init() {
+    applyTheme(currentTheme);
     createBoardGrid();
     updateAudioUI();
     updateAutoFlipUI();
@@ -705,7 +710,9 @@
 
     if (winningColor) {
       const avatarType = playerProfiles[winningColor].avatar;
-      gameOverAvatar.innerHTML = getPieceSvg(avatarType, PIECE_COLORS[winningColor], 40);
+      const isDark = currentTheme === 'dark';
+      const colorHex = isDark ? '#e6e6e6' : PIECE_COLORS[winningColor];
+      gameOverAvatar.innerHTML = getPieceSvg(avatarType, colorHex, 40);
     } else {
       gameOverAvatar.innerHTML = getPieceSvg('k', '#888888', 40);
     }
@@ -720,11 +727,15 @@
     document.getElementById('name-top').textContent = playerProfiles.b.name;
     document.getElementById('name-bottom').textContent = playerProfiles.w.name;
 
+    const isDark = currentTheme === 'dark';
+    const topColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
+    const bottomColor = isDark ? '#c9c8c8' : PIECE_COLORS.w;
+
     const avatarTop = document.getElementById('avatar-top');
-    avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, PIECE_COLORS.b, 26);
+    avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, topColor, 26);
 
     const avatarBottom = document.getElementById('avatar-bottom');
-    avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, PIECE_COLORS.w, 26);
+    avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, bottomColor, 26);
   }
 
   function openNameEditor(playerKey) {
@@ -747,7 +758,8 @@
 
   function openAvatarPicker(playerKey) {
     activeAvatarPlayer = playerKey;
-    const colorHex = PIECE_COLORS[playerKey];
+    const isDark = currentTheme === 'dark';
+    const colorHex = isDark ? '#e6e6e6' : PIECE_COLORS[playerKey];
     avatarModalPlayerDesc.textContent = `Choose an avatar for ${playerProfiles[playerKey].name}`;
     avatarChoices.innerHTML = '';
 
@@ -768,6 +780,26 @@
     });
 
     avatarModal.style.display = 'flex';
+  }
+
+  // --- Theme Management (Light / Dark Mode) ---
+  function applyTheme(theme) {
+    currentTheme = theme;
+    if (theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      if (themeMoonIcon) themeMoonIcon.style.display = 'none';
+      if (themeSunIcon) themeSunIcon.style.display = 'block';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      if (themeMoonIcon) themeMoonIcon.style.display = 'block';
+      if (themeSunIcon) themeSunIcon.style.display = 'none';
+    }
+    localStorage.setItem('minchess_theme', theme);
+    renderPlayerProfiles();
+  }
+
+  function toggleTheme() {
+    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
   }
 
   // --- Controls & Toggles ---
@@ -827,6 +859,11 @@
       chessAudio.toggleMute();
       updateAudioUI();
     });
+
+    // Theme toggle (Dark / Light)
+    if (btnTheme) {
+      btnTheme.addEventListener('click', toggleTheme);
+    }
 
     // Piece flip toggle (active player piece rotation)
     if (btnPieceFlip) {

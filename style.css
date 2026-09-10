@@ -47,6 +47,28 @@
   }
 }
 
+/* Dark Mode Theme Tokens (Sampled directly from user reference screenshot) */
+[data-theme="dark"] {
+  --bg-canvas: #161616;
+  --surface-card: #202020;
+  --border-light: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --text-primary: #f2f2f2;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  
+  --highlight-blue: #3f4c60; /* Dark slate-blue last-move highlight from screenshot */
+  --highlight-blue-active: #50617b;
+  --dot-color: rgba(255, 255, 255, 0.38);
+  --check-color: rgba(239, 68, 68, 0.45);
+  
+  --square-light: #4a4a4a;   /* Medium slate-charcoal tile from screenshot */
+  --square-dark: #2d2d2d;    /* Dark charcoal tile from screenshot */
+  
+  --piece-black: #0d0d0d;
+  --piece-white: #c7c6c7;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -965,4 +987,178 @@ body {
 @keyframes slideInRight {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
+}
+
+/* --------------------------------------------------------------------------
+   Dark Mode Component Styles & Piece Filters
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .header {
+  border-bottom-color: var(--border-subtle);
+}
+
+[data-theme="dark"] .footer-controls {
+  border-top-color: var(--border-subtle);
+}
+
+[data-theme="dark"] .toggle-pill {
+  background: #202020;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #a3a3a3;
+}
+
+[data-theme="dark"] .toggle-pill.active {
+  background: #f5f5f5;
+  color: #161616;
+  border-color: #f5f5f5;
+}
+
+[data-theme="dark"] .icon-btn {
+  background: #202020;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] .icon-btn:hover {
+  background: #282828;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+[data-theme="dark"] .control-btn {
+  background: #202020;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] .control-btn svg {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .control-btn:hover {
+  background: #282828;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .control-btn:hover svg {
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] .control-btn.active {
+  background: #f5f5f5;
+  color: #161616;
+  border-color: #f5f5f5;
+}
+
+[data-theme="dark"] .control-btn.active svg {
+  color: #161616;
+}
+
+[data-theme="dark"] .player-card.active-turn {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .player-avatar {
+  background: #202020;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .turn-badge {
+  background: #f5f5f5;
+  color: #161616;
+}
+
+[data-theme="dark"] .advantage-badge {
+  background: #2a2a2a;
+  color: #e5e5e5;
+}
+
+[data-theme="dark"] .board {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Dark mode piece tuning: brightens white pieces to crisp silver-white, deepens black pieces */
+[data-theme="dark"] .chess-piece[data-piece-key^="w_"],
+[data-theme="dark"] .dragging-piece[data-piece-key^="w_"],
+[data-theme="dark"] .captured-item img[src*="/w_"],
+[data-theme="dark"] .promotion-choice img[src*="/w_"] {
+  filter: brightness(1.20) contrast(1.05);
+}
+
+[data-theme="dark"] .chess-piece[data-piece-key^="b_"],
+[data-theme="dark"] .dragging-piece[data-piece-key^="b_"],
+[data-theme="dark"] .captured-item img[src*="/b_"],
+[data-theme="dark"] .promotion-choice img[src*="/b_"] {
+  filter: brightness(0.29) contrast(1.2);
+}
+
+/* Modal and Drawer in Dark Mode */
+[data-theme="dark"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .modal-card {
+  background: #202020;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] .modal-input {
+  background: #161616;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] .drawer-panel {
+  background: #1a1a1a;
+  color: #f5f5f5;
+}
+
+[data-theme="dark"] .drawer-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .history-empty {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .history-row:hover {
+  background: #262626;
+}
+
+[data-theme="dark"] .btn-primary {
+  background: #f5f5f5;
+  color: #161616;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: #ffffff;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: #262626;
+  color: #f5f5f5;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: #303030;
+}
+
+[data-theme="dark"] .promotion-choice {
+  background: #262626;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .avatar-choice {
+  background: #262626;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .avatar-choice.selected {
+  background: #383838;
+  border-color: #f5f5f5;
+}
+
+[data-theme="dark"] .winner-avatar {
+  background: #262626;
+  border-color: rgba(255, 255, 255, 0.12);
 }
