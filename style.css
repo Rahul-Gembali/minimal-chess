@@ -117,35 +117,42 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 4px 12px;
+  padding: 6px 0 12px;
   border-bottom: 1px solid var(--border-subtle);
+  width: 100%;
 }
 
 .brand-title {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  flex-shrink: 0;
 }
 
 .icon-btn {
   background: var(--surface-card);
   border: 1px solid var(--border-light);
   border-radius: 8px;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--text-primary);
   transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+  touch-action: manipulation;
 }
 
 .icon-btn:hover {
@@ -158,26 +165,61 @@ body {
 }
 
 .icon-svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
 }
 
 .toggle-pill {
   background: var(--surface-card);
   border: 1px solid var(--border-light);
   border-radius: 9999px;
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 5px 8px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   color: var(--text-secondary);
   transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  touch-action: manipulation;
 }
 
 .toggle-pill.active {
   background: #111111;
   color: #ffffff;
   border-color: #111111;
+}
+
+@media (min-width: 600px) {
+  .brand-title {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+  }
+  .header-actions {
+    gap: 8px;
+  }
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .icon-svg {
+    width: 18px;
+    height: 18px;
+  }
+  .toggle-pill {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 350px) {
+  .brand-title {
+    display: none;
+  }
+  .header {
+    justify-content: flex-end;
+  }
 }
 
 /* --------------------------------------------------------------------------

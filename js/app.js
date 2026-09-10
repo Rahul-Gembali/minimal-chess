@@ -783,24 +783,45 @@
   }
 
   // --- Theme Management (Light / Dark Mode) ---
+  function safeSetStorage(key, val) {
+    try {
+      localStorage.setItem(key, val);
+    } catch (e) {}
+  }
+
   function applyTheme(theme) {
     currentTheme = theme;
     if (theme === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.setAttribute('data-theme', 'dark');
       if (themeMoonIcon) themeMoonIcon.style.display = 'none';
       if (themeSunIcon) themeSunIcon.style.display = 'block';
     } else {
       document.documentElement.removeAttribute('data-theme');
+      document.body.removeAttribute('data-theme');
       if (themeMoonIcon) themeMoonIcon.style.display = 'block';
       if (themeSunIcon) themeSunIcon.style.display = 'none';
     }
-    localStorage.setItem('minchess_theme', theme);
+    safeSetStorage('minchess_theme', theme);
     renderPlayerProfiles();
   }
 
-  function toggleTheme() {
+  let isThemeToggling = false;
+  function toggleTheme(e) {
+    if (e) {
+      if (e.preventDefault) e.preventDefault();
+      if (e.stopPropagation) e.stopPropagation();
+    }
+    if (isThemeToggling) return;
+    isThemeToggling = true;
+    setTimeout(() => { isThemeToggling = false; }, 250);
+
     applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
   }
+
+  // Expose globally for console and debug access
+  window.toggleTheme = toggleTheme;
+  window.applyTheme = applyTheme;
 
   // --- Controls & Toggles ---
   function updateAudioUI() {
