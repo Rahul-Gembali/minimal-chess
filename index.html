@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Minimal Chess</title>
-  <link rel="stylesheet" href="style.css?v=2.4" />
+  <link rel="stylesheet" href="style.css?v=2.5" />
   <script>
     (function() {
       try {
@@ -30,7 +30,7 @@
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
-          <span class="timer-pill-text" id="timer-pill-label">∞</span>
+          <span class="timer-pill-text" id="timer-pill-label"><span class="infinity-symbol">∞</span></span>
         </button>
         <button id="btn-pieceflip" class="toggle-pill active" title="Rotate pieces 180° for opposite player on Black's turn">
           Piece Flip
@@ -103,7 +103,7 @@
           </div>
         </div>
         <div class="player-status-group">
-          <div class="player-clock" id="clock-top" title="Tap to adjust timer">∞</div>
+          <div class="player-clock" id="clock-top" title="Tap to adjust timer"><span class="infinity-symbol">∞</span></div>
           <div class="turn-badge" id="turn-badge-top">Turn</div>
         </div>
       </section>
@@ -140,7 +140,7 @@
           </div>
         </div>
         <div class="player-status-group">
-          <div class="player-clock" id="clock-bottom" title="Tap to adjust timer">∞</div>
+          <div class="player-clock" id="clock-bottom" title="Tap to adjust timer"><span class="infinity-symbol">∞</span></div>
           <div class="turn-badge" id="turn-badge-bottom">Turn</div>
         </div>
       </section>
@@ -262,7 +262,7 @@
           <button type="button" class="preset-pill" data-time="60">1m</button>
           <button type="button" class="preset-pill" data-time="180">3m</button>
           <button type="button" class="preset-pill" data-time="600">10m</button>
-          <button type="button" class="preset-pill active" data-time="infinite">∞</button>
+          <button type="button" class="preset-pill active" data-time="infinite"><span class="infinity-symbol">∞</span></button>
           <button type="button" class="preset-pill" data-time="custom">Custom</button>
         </div>
         <div class="timer-custom-row" id="timer-custom-row-w" style="display: none;">
@@ -285,7 +285,7 @@
           <button type="button" class="preset-pill" data-time="60">1m</button>
           <button type="button" class="preset-pill" data-time="180">3m</button>
           <button type="button" class="preset-pill" data-time="600">10m</button>
-          <button type="button" class="preset-pill active" data-time="infinite">∞</button>
+          <button type="button" class="preset-pill active" data-time="infinite"><span class="infinity-symbol">∞</span></button>
           <button type="button" class="preset-pill" data-time="custom">Custom</button>
         </div>
         <div class="timer-custom-row" id="timer-custom-row-b" style="display: none;">
@@ -341,9 +341,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/chess.js?v=2.4"></script>
-  <script src="js/pieces.js?v=2.4"></script>
-  <script src="js/audio.js?v=2.4"></script>
-  <script src="js/app.js?v=2.4"></script>
+  <script src="js/chess.js?v=2.5"></script>
+  <script src="js/pieces.js?v=2.5"></script>
+  <script src="js/audio.js?v=2.5"></script>
+  <script src="js/app.js?v=2.5"></script>
 </body>
 </html>

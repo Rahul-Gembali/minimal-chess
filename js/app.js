@@ -917,7 +917,9 @@
 
   // --- Game Timers & Clocks Mechanics ---
   function formatClockDisplay(seconds) {
-    if (seconds === Infinity || seconds === 'infinite' || seconds === undefined) return '∞';
+    if (seconds === Infinity || seconds === 'infinite' || seconds === undefined) {
+      return '<span class="infinity-symbol">∞</span>';
+    }
     if (seconds <= 0) return '0:00';
     if (seconds < 10) return seconds.toFixed(1) + 's';
     const m = Math.floor(seconds / 60);
@@ -927,7 +929,7 @@
 
   function getTimerSummaryLabel() {
     function formatSetting(val) {
-      if (val === 'infinite') return '∞';
+      if (val === 'infinite') return '<span class="infinity-symbol">∞</span>';
       const m = Math.round(Number(val) / 60);
       return `${m}m`;
     }
@@ -938,9 +940,9 @@
   }
 
   function updateClockDisplays() {
-    if (clockBottom) clockBottom.textContent = formatClockDisplay(playerTimeLeft.w);
-    if (clockTop) clockTop.textContent = formatClockDisplay(playerTimeLeft.b);
-    if (timerPillLabel) timerPillLabel.textContent = getTimerSummaryLabel();
+    if (clockBottom) clockBottom.innerHTML = formatClockDisplay(playerTimeLeft.w);
+    if (clockTop) clockTop.innerHTML = formatClockDisplay(playerTimeLeft.b);
+    if (timerPillLabel) timerPillLabel.innerHTML = getTimerSummaryLabel();
 
     // Low-time warning (< 20s, non-infinite)
     if (clockBottom) {
