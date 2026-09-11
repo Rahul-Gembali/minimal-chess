@@ -32,7 +32,8 @@
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Geist Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "SF Mono", "Geist Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   
-  --board-size: min(86vw, 440px);
+  --board-size: min(88vw, calc(100vh - 215px), 440px);
+  --board-size: min(88vw, calc(100dvh - 215px), 440px);
 }
 
 @media (min-width: 768px) {
@@ -77,15 +78,21 @@
   user-select: none;
 }
 
+html, body {
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 body {
   font-family: var(--font-ui);
   background-color: var(--bg-canvas);
   color: var(--text-primary);
-  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow-x: hidden;
   touch-action: manipulation;
 }
 
@@ -95,18 +102,23 @@ body {
 .app-container {
   width: 100%;
   max-width: 600px;
-  min-height: 100vh;
+  height: 100%;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 6px 12px;
   margin: 0 auto;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 @media (min-width: 768px) {
   .app-container {
+    height: auto;
     min-height: 94vh;
     padding: 20px 24px;
+    overflow: visible;
   }
 }
 
@@ -117,9 +129,10 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 0 12px;
+  padding: 4px 0 8px;
   border-bottom: 1px solid var(--border-subtle);
   width: 100%;
+  flex-shrink: 0;
 }
 
 .brand-title {
@@ -230,9 +243,17 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 6px;
   flex: 1;
-  padding: 8px 0;
+  min-height: 0;
+  padding: 2px 0;
+}
+
+@media (min-width: 768px) {
+  .game-area {
+    gap: 12px;
+    padding: 8px 0;
+  }
 }
 
 .player-card {
@@ -240,11 +261,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
+  padding: 3px 6px;
   background: transparent;
   border-radius: 10px;
   transition: background 0.25s ease, border-color 0.25s ease;
   transform: none !important;
+  flex-shrink: 0;
 }
 
 .player-card.active-turn {
@@ -254,12 +276,12 @@ body {
 .player-profile {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .player-avatar {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: 1px solid var(--border-light);
   background: var(--surface-card);
@@ -270,11 +292,25 @@ body {
   transition: transform 0.15s ease, border-color 0.15s ease;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  flex-shrink: 0;
 }
 
 .player-avatar:hover {
   border-color: var(--text-primary);
   transform: scale(1.05);
+}
+
+@media (min-width: 768px) {
+  .player-card {
+    padding: 6px 8px;
+  }
+  .player-profile {
+    gap: 10px;
+  }
+  .player-avatar {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .player-meta {
@@ -634,30 +670,33 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 6px;
-  padding: 10px 4px 4px;
+  gap: 5px;
+  padding: 6px 2px 3px;
   border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .control-btn {
   flex: 1;
-  max-width: 80px;
+  max-width: 76px;
   background: var(--surface-card);
   border: 1px solid var(--border-light);
   border-radius: 8px;
-  padding: 8px 4px;
+  padding: 6px 2px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   cursor: pointer;
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.02em;
   transition: all 0.15s ease;
+  touch-action: manipulation;
 }
 
 .control-btn:disabled {
@@ -667,9 +706,27 @@ body {
 }
 
 .control-btn svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   color: var(--text-secondary);
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .footer-controls {
+    gap: 8px;
+    padding: 10px 4px 4px;
+  }
+  .control-btn {
+    max-width: 80px;
+    padding: 8px 4px;
+    font-size: 11px;
+    gap: 4px;
+  }
+  .control-btn svg {
+    width: 17px;
+    height: 17px;
+  }
 }
 
 .control-btn:hover {
