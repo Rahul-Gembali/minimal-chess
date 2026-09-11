@@ -97,15 +97,38 @@
 
   // Game Timers State & Elements
   let playerTimeSettings = { w: 'infinite', b: 'infinite' };
+  let playerIsCustom = { w: false, b: false };
+  let modalStepperMins = { w: 5, b: 5 };
+
   try {
-    const savedTimers = localStorage.getItem('minchess_timer_settings_v2');
-    if (savedTimers) {
-      const parsed = JSON.parse(savedTimers);
+    const savedTimersV3 = localStorage.getItem('minchess_timer_settings_v3');
+    if (savedTimersV3) {
+      const parsed = JSON.parse(savedTimersV3);
       if (parsed && typeof parsed === 'object') {
-        playerTimeSettings = {
-          w: parsed.w !== undefined ? parsed.w : 'infinite',
-          b: parsed.b !== undefined ? parsed.b : 'infinite'
-        };
+        if (parsed.settings) {
+          playerTimeSettings = parsed.settings;
+          if (parsed.isCustom) playerIsCustom = parsed.isCustom;
+          if (parsed.stepperMins) modalStepperMins = parsed.stepperMins;
+        }
+      }
+    } else {
+      const savedTimers = localStorage.getItem('minchess_timer_settings_v2');
+      if (savedTimers) {
+        const parsed = JSON.parse(savedTimers);
+        if (parsed && typeof parsed === 'object') {
+          playerTimeSettings = {
+            w: parsed.w !== undefined ? parsed.w : 'infinite',
+            b: parsed.b !== undefined ? parsed.b : 'infinite'
+          };
+          if (typeof playerTimeSettings.w === 'number' && ![60, 180, 600].includes(playerTimeSettings.w)) {
+            playerIsCustom.w = true;
+            modalStepperMins.w = Math.round(playerTimeSettings.w / 60);
+          }
+          if (typeof playerTimeSettings.b === 'number' && ![60, 180, 600].includes(playerTimeSettings.b)) {
+            playerIsCustom.b = true;
+            modalStepperMins.b = Math.round(playerTimeSettings.b / 60);
+          }
+        }
       }
     }
   } catch (e) {}
@@ -130,10 +153,7 @@
 
   // Staged state for modal
   let modalTimeSettings = { w: playerTimeSettings.w, b: playerTimeSettings.b };
-  let modalStepperMins = {
-    w: typeof playerTimeSettings.w === 'number' ? Math.max(1, Math.round(playerTimeSettings.w / 60)) : 5,
-    b: typeof playerTimeSettings.b === 'number' ? Math.max(1, Math.round(playerTimeSettings.b / 60)) : 5
-  };
+  let modalIsCustom = { w: playerIsCustom.w, b: playerIsCustom.b };
 
   // --- Initial Setup ---
   function init() {
@@ -428,15 +448,19 @@
     historyMoves.push(result);
     currentViewIndex = historyFens.length - 1;
 
-    // Sound effect
+    // Sound effect & Minimal tactile haptic feedback
     if (game.in_checkmate()) {
       chessAudio.playVictory();
+      if (typeof chessHaptics !== 'undefined') chessHaptics.timeout();
     } else if (game.in_check()) {
       chessAudio.playCheck();
+      if (typeof chessHaptics !== 'undefined') chessHaptics.check();
     } else if (isCapture) {
       chessAudio.playCapture();
+      if (typeof chessHaptics !== 'undefined') chessHaptics.capture();
     } else {
       chessAudio.playMove();
+      if (typeof chessHaptics !== 'undefined') chessHaptics.move();
     }
 
     selectedSquare = null;
@@ -874,9 +898,14 @@
     applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
   }
 
-  // Expose globally for console and debug access
+  // Expose globally for console, debug, and test access
   window.toggleTheme = toggleTheme;
   window.applyTheme = applyTheme;
+  window.startNewGame = startNewGame;
+  window.openTimerModal = openTimerModal;
+  window.closeTimerModal = closeTimerModal;
+  window.setModalPlayerTime = setModalPlayerTime;
+  window.applyTimerSettings = applyTimerSettings;
 
   // --- Controls & Toggles ---
   function updateAudioUI() {
@@ -944,18 +973,22 @@
     if (clockTop) clockTop.innerHTML = formatClockDisplay(playerTimeLeft.b);
     if (timerPillLabel) timerPillLabel.innerHTML = getTimerSummaryLabel();
 
-    // Low-time warning (< 20s, non-infinite)
+    // Critical low-time warning (last 10 seconds, non-infinite): red color styling
     if (clockBottom) {
-      if (playerTimeLeft.w !== Infinity && playerTimeLeft.w <= 20 && playerTimeLeft.w > 0) {
+      if (playerTimeLeft.w !== Infinity && playerTimeLeft.w <= 10 && playerTimeLeft.w > 0) {
+        clockBottom.classList.add('critical-time');
         clockBottom.classList.add('low-time');
       } else {
+        clockBottom.classList.remove('critical-time');
         clockBottom.classList.remove('low-time');
       }
     }
     if (clockTop) {
-      if (playerTimeLeft.b !== Infinity && playerTimeLeft.b <= 20 && playerTimeLeft.b > 0) {
+      if (playerTimeLeft.b !== Infinity && playerTimeLeft.b <= 10 && playerTimeLeft.b > 0) {
+        clockTop.classList.add('critical-time');
         clockTop.classList.add('low-time');
       } else {
+        clockTop.classList.remove('critical-time');
         clockTop.classList.remove('low-time');
       }
     }
@@ -1001,9 +1034,14 @@
       playerTimeLeft[currentTurn] = Math.max(0, playerTimeLeft[currentTurn] - elapsedSeconds);
       const currInt = Math.floor(playerTimeLeft[currentTurn]);
 
-      // Soft audio tick warning when under 10 seconds on integer second boundary
-      if (currInt < 10 && currInt > 0 && currInt !== prevInt && typeof chessAudio !== 'undefined') {
-        chessAudio.playTick();
+      // Last 10 seconds: greater haptic feedback & soft audio tick on integer second boundary
+      if (currInt <= 10 && currInt > 0 && currInt !== prevInt) {
+        if (typeof chessAudio !== 'undefined') {
+          chessAudio.playTick();
+        }
+        if (typeof chessHaptics !== 'undefined') {
+          chessHaptics.countdownTick(); // Greater haptic feedback!
+        }
       }
 
       updateClockDisplays();
@@ -1016,6 +1054,9 @@
 
   function handleTimeout(timedOutColor) {
     stopClock();
+    if (typeof chessHaptics !== 'undefined') {
+      chessHaptics.timeout();
+    }
     const winningColor = timedOutColor === 'w' ? 'b' : 'w';
     const winningPlayer = playerProfiles[winningColor].name;
 
@@ -1082,9 +1123,32 @@
     return false;
   }
 
+  // --- Floating Toast Notification ---
+  let toastTimeout = null;
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('visible');
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      toast.classList.remove('visible');
+    }, 2400);
+  }
+
   // --- Centered Timer Modal Controller ---
   function openTimerModal() {
+    // Cannot modify timer mid-game
+    if (historyMoves.length > 0 && !game.game_over()) {
+      showToast('Timer locked during active match. Tap Reset to change.');
+      if (typeof chessHaptics !== 'undefined') {
+        chessHaptics.tap();
+      }
+      return;
+    }
+
     modalTimeSettings = { ...playerTimeSettings };
+    modalIsCustom = { ...playerIsCustom };
     modalStepperMins = {
       w: typeof modalTimeSettings.w === 'number' ? Math.max(1, Math.round(modalTimeSettings.w / 60)) : 5,
       b: typeof modalTimeSettings.b === 'number' ? Math.max(1, Math.round(modalTimeSettings.b / 60)) : 5
@@ -1093,22 +1157,24 @@
     if (timerNameW) timerNameW.textContent = playerProfiles.w.name;
     if (timerNameB) timerNameB.textContent = playerProfiles.b.name;
 
-    const areSynced = modalTimeSettings.w === modalTimeSettings.b;
+    const areSynced = modalTimeSettings.w === modalTimeSettings.b && modalIsCustom.w === modalIsCustom.b;
     if (timerSyncToggle) timerSyncToggle.checked = areSynced;
 
     renderModalPlayerTimer('w');
     renderModalPlayerTimer('b');
 
     if (timerModal) timerModal.style.display = 'flex';
+    if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
   }
 
   function closeTimerModal() {
     if (timerModal) timerModal.style.display = 'none';
+    if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
   }
 
   function renderModalPlayerTimer(player) {
     const currentVal = modalTimeSettings[player];
-    const isCustom = typeof currentVal === 'number' && ![60, 180, 600].includes(currentVal);
+    const isCustom = modalIsCustom[player];
     const container = document.querySelector(`.timer-presets[data-player="${player}"]`);
     if (!container) return;
 
@@ -1116,9 +1182,13 @@
     pills.forEach(pill => {
       const dataTime = pill.dataset.time;
       let active = false;
-      if (dataTime === 'infinite' && currentVal === 'infinite') active = true;
-      else if (dataTime === 'custom' && isCustom) active = true;
-      else if (String(currentVal) === dataTime) active = true;
+      if (isCustom) {
+        active = (dataTime === 'custom');
+      } else if (dataTime === 'infinite' && currentVal === 'infinite') {
+        active = true;
+      } else if (!isCustom && String(currentVal) === dataTime) {
+        active = true;
+      }
 
       if (active) pill.classList.add('active');
       else pill.classList.remove('active');
@@ -1136,11 +1206,13 @@
     }
   }
 
-  function setModalPlayerTime(player, value) {
+  function setModalPlayerTime(player, value, isCustomMode = false) {
     modalTimeSettings[player] = value;
+    modalIsCustom[player] = isCustomMode;
     if (timerSyncToggle && timerSyncToggle.checked) {
       const other = player === 'w' ? 'b' : 'w';
       modalTimeSettings[other] = value;
+      modalIsCustom[other] = isCustomMode;
       modalStepperMins[other] = modalStepperMins[player];
       renderModalPlayerTimer(other);
     }
@@ -1150,15 +1222,22 @@
   function adjustStepper(player, delta) {
     let current = modalStepperMins[player] + delta;
     if (current < 1) current = 1;
-    if (current > 60) current = 60;
+    if (current > 180) current = 180;
     modalStepperMins[player] = current;
-    setModalPlayerTime(player, current * 60);
+    modalIsCustom[player] = true;
+    setModalPlayerTime(player, current * 60, true);
+    if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
   }
 
   function applyTimerSettings() {
     playerTimeSettings = { ...modalTimeSettings };
+    playerIsCustom = { ...modalIsCustom };
     try {
-      localStorage.setItem('minchess_timer_settings_v2', JSON.stringify(playerTimeSettings));
+      localStorage.setItem('minchess_timer_settings_v3', JSON.stringify({
+        settings: playerTimeSettings,
+        isCustom: playerIsCustom,
+        stepperMins: modalStepperMins
+      }));
     } catch (e) {}
 
     resetClocks();
@@ -1186,18 +1265,23 @@
 
     // Audio toggle
     btnAudio.addEventListener('click', () => {
+      if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
       chessAudio.toggleMute();
       updateAudioUI();
     });
 
     // Theme toggle (Dark / Light)
     if (btnTheme) {
-      btnTheme.addEventListener('click', toggleTheme);
+      btnTheme.addEventListener('click', (e) => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+        toggleTheme(e);
+      });
     }
 
     // Piece flip toggle (active player piece rotation)
     if (btnPieceFlip) {
       btnPieceFlip.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
         pieceFlipEnabled = !pieceFlipEnabled;
         localStorage.setItem('minchess_pieceflip_v2', pieceFlipEnabled);
         updatePieceFlipUI();
@@ -1208,6 +1292,7 @@
     // Auto-flip board toggle
     if (btnAutoFlip) {
       btnAutoFlip.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
         autoFlipEnabled = !autoFlipEnabled;
         localStorage.setItem('minchess_autoflip_v2', autoFlipEnabled);
         updateAutoFlipUI();
@@ -1217,15 +1302,22 @@
 
     // Move history Back & Forward buttons
     if (btnBack) {
-      btnBack.addEventListener('click', stepBack);
+      btnBack.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+        stepBack();
+      });
     }
     if (btnForward) {
-      btnForward.addEventListener('click', stepForward);
+      btnForward.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+        stepForward();
+      });
     }
 
     // Tabletop mode toggle
     if (btnTabletop) {
       btnTabletop.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
         isTabletopMode = !isTabletopMode;
         localStorage.setItem('minchess_tabletop', isTabletopMode);
         updateTabletopUI();
@@ -1236,6 +1328,7 @@
     // Undo move
     btnUndo.addEventListener('click', () => {
       if (game.history().length > 0) {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
         game.undo();
         historyFens.pop();
         historyMoves.pop();
@@ -1254,6 +1347,7 @@
 
     // Reset / New game
     btnNewGame.addEventListener('click', () => {
+      if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
       if (confirm('Start a new game?')) {
         startNewGame();
       }
@@ -1263,8 +1357,14 @@
     if (btnTimer) btnTimer.addEventListener('click', openTimerModal);
     if (clockTop) clockTop.addEventListener('click', openTimerModal);
     if (clockBottom) clockBottom.addEventListener('click', openTimerModal);
-    if (btnApplyTimer) btnApplyTimer.addEventListener('click', applyTimerSettings);
-    if (btnCancelTimer) btnCancelTimer.addEventListener('click', closeTimerModal);
+    if (btnApplyTimer) btnApplyTimer.addEventListener('click', () => {
+      if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+      applyTimerSettings();
+    });
+    if (btnCancelTimer) btnCancelTimer.addEventListener('click', () => {
+      if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+      closeTimerModal();
+    });
 
     if (timerModal) {
       timerModal.addEventListener('click', e => {
@@ -1275,14 +1375,15 @@
     // Timer presets
     document.querySelectorAll('.timer-presets .preset-pill').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
         const player = btn.parentElement.dataset.player;
         const timeVal = btn.dataset.time;
         if (timeVal === 'infinite') {
-          setModalPlayerTime(player, 'infinite');
+          setModalPlayerTime(player, 'infinite', false);
         } else if (timeVal === 'custom') {
-          setModalPlayerTime(player, modalStepperMins[player] * 60);
+          setModalPlayerTime(player, modalStepperMins[player] * 60, true);
         } else {
-          setModalPlayerTime(player, Number(timeVal));
+          setModalPlayerTime(player, Number(timeVal), false);
         }
       });
     });
@@ -1299,8 +1400,9 @@
 
     if (timerSyncToggle) {
       timerSyncToggle.addEventListener('change', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
         if (timerSyncToggle.checked) {
-          setModalPlayerTime('w', modalTimeSettings.w);
+          setModalPlayerTime('w', modalTimeSettings.w, modalIsCustom.w);
         }
       });
     }

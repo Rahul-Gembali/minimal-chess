@@ -520,23 +520,26 @@ body {
   border-color: #f2f2f2;
 }
 
-/* Low-time alert (< 20s) */
+/* Critical time alert (last 10s) — minimal clean red aesthetic */
+.player-clock.critical-time,
 .player-clock.low-time {
-  background: #fee2e2 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
   color: #dc2626 !important;
-  border-color: #ef4444 !important;
-  animation: clock-pulse 1s infinite alternate;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  animation: clock-heartbeat 1s infinite ease-in-out;
 }
 
+[data-theme="dark"] .player-clock.critical-time,
 [data-theme="dark"] .player-clock.low-time {
-  background: #450a0a !important;
-  color: #fca5a5 !important;
-  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.55) !important;
 }
 
-@keyframes clock-pulse {
+@keyframes clock-heartbeat {
   0% { transform: scale(1); }
-  100% { transform: scale(1.05); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 /* Opponent 180° rotation in tabletop / pass-and-play */
@@ -544,6 +547,7 @@ body {
   transform: rotate(180deg);
 }
 
+#player-top.facing-opponent .player-clock.critical-time,
 #player-top.facing-opponent .player-clock.low-time {
   transform: rotate(180deg) scale(1.05);
 }
@@ -1614,4 +1618,44 @@ body {
 [data-theme="dark"] .winner-avatar {
   background: #262626;
   border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* --------------------------------------------------------------------------
+   Clean Minimal Floating Toast Notification
+   -------------------------------------------------------------------------- */
+.toast-notification {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-14px);
+  background: rgba(17, 17, 17, 0.92);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+  z-index: 2200;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  max-width: 90vw;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.toast-notification.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+[data-theme="dark"] .toast-notification {
+  background: rgba(242, 242, 242, 0.94);
+  color: #111111;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
 }

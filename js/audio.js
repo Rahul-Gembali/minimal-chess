@@ -202,13 +202,64 @@ class ChessAudio {
   }
 }
 
+// Minimal, clean tactile haptic feedback system
+class ChessHaptics {
+  constructor() {
+    this.enabled = true;
+  }
+
+  isSupported() {
+    return typeof window !== 'undefined' && typeof window.navigator !== 'undefined' && typeof window.navigator.vibrate === 'function';
+  }
+
+  vibrate(pattern) {
+    if (!this.enabled || !this.isSupported()) return;
+    try {
+      window.navigator.vibrate(pattern);
+    } catch (e) {}
+  }
+
+  // 1. Move: ultra-clean, crisp micro-tap (feels like a precise mechanical switch)
+  move() {
+    this.vibrate(12);
+  }
+
+  // 2. Capture: firmer distinct double-tap
+  capture() {
+    this.vibrate([18, 25, 18]);
+  }
+
+  // 3. Check: sharper warning pulse
+  check() {
+    this.vibrate([25, 35, 25]);
+  }
+
+  // 4. Greater haptic feedback for the last 10 seconds of timer (urgent tactile heartbeat)
+  countdownTick() {
+    this.vibrate(45);
+  }
+
+  // 5. Timeout / Game over
+  timeout() {
+    this.vibrate([50, 40, 80]);
+  }
+
+  // 6. UI interaction / Pill / Button tap
+  tap() {
+    this.vibrate(8);
+  }
+}
+
 var chessAudio = new ChessAudio();
+var chessHaptics = new ChessHaptics();
 
 if (typeof window !== 'undefined') {
   window.ChessAudio = ChessAudio;
   window.chessAudio = chessAudio;
+  window.ChessHaptics = ChessHaptics;
+  window.chessHaptics = chessHaptics;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ChessAudio, chessAudio };
+  module.exports = { ChessAudio, chessAudio, ChessHaptics, chessHaptics };
 }
