@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Minimal Chess</title>
-  <link rel="stylesheet" href="style.css?v=2.3" />
+  <link rel="stylesheet" href="style.css?v=2.4" />
   <script>
     (function() {
       try {
@@ -25,6 +25,13 @@
         <span class="brand-title">MINIMAL CHESS</span>
       </div>
       <div class="header-actions">
+        <button id="btn-timer" class="icon-btn header-timer-btn" title="Game Timers" aria-label="Game Timers">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span class="timer-pill-text" id="timer-pill-label">∞</span>
+        </button>
         <button id="btn-pieceflip" class="toggle-pill active" title="Rotate pieces 180° for opposite player on Black's turn">
           Piece Flip
         </button>
@@ -95,7 +102,10 @@
             </div>
           </div>
         </div>
-        <div class="turn-badge" id="turn-badge-top">Turn</div>
+        <div class="player-status-group">
+          <div class="player-clock" id="clock-top" title="Tap to adjust timer">∞</div>
+          <div class="turn-badge" id="turn-badge-top">Turn</div>
+        </div>
       </section>
 
       <!-- The Minimalist Chessboard Container -->
@@ -129,7 +139,10 @@
             </div>
           </div>
         </div>
-        <div class="turn-badge" id="turn-badge-bottom">Turn</div>
+        <div class="player-status-group">
+          <div class="player-clock" id="clock-bottom" title="Tap to adjust timer">∞</div>
+          <div class="turn-badge" id="turn-badge-bottom">Turn</div>
+        </div>
       </section>
     </main>
 
@@ -222,6 +235,77 @@
     </div>
   </div>
 
+  <!-- Centered Game Timers Modal Dialog -->
+  <div class="modal-overlay" id="timer-modal" style="display: none;">
+    <div class="modal-card timer-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Game Timers</h3>
+        <p class="modal-subtitle">Choose time controls for each player</p>
+      </div>
+
+      <!-- Sync Both Players Checkbox -->
+      <div class="timer-sync-wrap">
+        <label class="timer-sync-label" for="timer-sync-toggle">
+          <input type="checkbox" id="timer-sync-toggle" checked />
+          <span class="timer-sync-custom-box"></span>
+          <span class="timer-sync-text">Same time for both players</span>
+        </label>
+      </div>
+
+      <!-- White Player Timer Section -->
+      <div class="timer-player-section" id="timer-section-w">
+        <div class="timer-player-heading">
+          <span class="player-color-dot white-dot"></span>
+          <span class="timer-player-name" id="timer-name-w">White</span>
+        </div>
+        <div class="timer-presets" data-player="w">
+          <button type="button" class="preset-pill" data-time="60">1m</button>
+          <button type="button" class="preset-pill" data-time="180">3m</button>
+          <button type="button" class="preset-pill" data-time="600">10m</button>
+          <button type="button" class="preset-pill active" data-time="infinite">∞</button>
+          <button type="button" class="preset-pill" data-time="custom">Custom</button>
+        </div>
+        <div class="timer-custom-row" id="timer-custom-row-w" style="display: none;">
+          <span class="timer-custom-label">Minutes:</span>
+          <div class="timer-stepper">
+            <button type="button" class="stepper-btn" id="stepper-dec-w" aria-label="Decrease minutes">−</button>
+            <span class="stepper-val" id="stepper-val-w">5</span>
+            <button type="button" class="stepper-btn" id="stepper-inc-w" aria-label="Increase minutes">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Black Player Timer Section -->
+      <div class="timer-player-section" id="timer-section-b">
+        <div class="timer-player-heading">
+          <span class="player-color-dot black-dot"></span>
+          <span class="timer-player-name" id="timer-name-b">Black</span>
+        </div>
+        <div class="timer-presets" data-player="b">
+          <button type="button" class="preset-pill" data-time="60">1m</button>
+          <button type="button" class="preset-pill" data-time="180">3m</button>
+          <button type="button" class="preset-pill" data-time="600">10m</button>
+          <button type="button" class="preset-pill active" data-time="infinite">∞</button>
+          <button type="button" class="preset-pill" data-time="custom">Custom</button>
+        </div>
+        <div class="timer-custom-row" id="timer-custom-row-b" style="display: none;">
+          <span class="timer-custom-label">Minutes:</span>
+          <div class="timer-stepper">
+            <button type="button" class="stepper-btn" id="stepper-dec-b" aria-label="Decrease minutes">−</button>
+            <span class="stepper-val" id="stepper-val-b">5</span>
+            <button type="button" class="stepper-btn" id="stepper-inc-b" aria-label="Increase minutes">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div class="modal-actions timer-modal-actions">
+        <button type="button" id="btn-apply-timer" class="btn-primary">Apply Timers</button>
+        <button type="button" id="btn-cancel-timer" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Player Name Edit Modal Dialog -->
   <div class="modal-overlay" id="name-modal" style="display: none;">
     <div class="modal-card">
@@ -257,9 +341,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/chess.js?v=2.3"></script>
-  <script src="js/pieces.js?v=2.3"></script>
-  <script src="js/audio.js?v=2.3"></script>
-  <script src="js/app.js?v=2.3"></script>
+  <script src="js/chess.js?v=2.4"></script>
+  <script src="js/pieces.js?v=2.4"></script>
+  <script src="js/audio.js?v=2.4"></script>
+  <script src="js/app.js?v=2.4"></script>
 </body>
 </html>

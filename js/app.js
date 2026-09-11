@@ -95,6 +95,46 @@
   const btnCloseAvatarModal = document.getElementById('btn-close-avatar-modal');
   let activeAvatarPlayer = null;
 
+  // Game Timers State & Elements
+  let playerTimeSettings = { w: 'infinite', b: 'infinite' };
+  try {
+    const savedTimers = localStorage.getItem('minchess_timer_settings_v2');
+    if (savedTimers) {
+      const parsed = JSON.parse(savedTimers);
+      if (parsed && typeof parsed === 'object') {
+        playerTimeSettings = {
+          w: parsed.w !== undefined ? parsed.w : 'infinite',
+          b: parsed.b !== undefined ? parsed.b : 'infinite'
+        };
+      }
+    }
+  } catch (e) {}
+
+  let playerTimeLeft = {
+    w: playerTimeSettings.w === 'infinite' ? Infinity : Number(playerTimeSettings.w),
+    b: playerTimeSettings.b === 'infinite' ? Infinity : Number(playerTimeSettings.b)
+  };
+  let clockInterval = null;
+  let lastClockTimestamp = null;
+
+  const btnTimer = document.getElementById('btn-timer');
+  const timerPillLabel = document.getElementById('timer-pill-label');
+  const clockTop = document.getElementById('clock-top');
+  const clockBottom = document.getElementById('clock-bottom');
+  const timerModal = document.getElementById('timer-modal');
+  const timerSyncToggle = document.getElementById('timer-sync-toggle');
+  const timerNameW = document.getElementById('timer-name-w');
+  const timerNameB = document.getElementById('timer-name-b');
+  const btnApplyTimer = document.getElementById('btn-apply-timer');
+  const btnCancelTimer = document.getElementById('btn-cancel-timer');
+
+  // Staged state for modal
+  let modalTimeSettings = { w: playerTimeSettings.w, b: playerTimeSettings.b };
+  let modalStepperMins = {
+    w: typeof playerTimeSettings.w === 'number' ? Math.max(1, Math.round(playerTimeSettings.w / 60)) : 5,
+    b: typeof playerTimeSettings.b === 'number' ? Math.max(1, Math.round(playerTimeSettings.b / 60)) : 5
+  };
+
   // --- Initial Setup ---
   function init() {
     applyTheme(currentTheme);
@@ -105,6 +145,7 @@
     updateTabletopUI();
     updateHistoryNavButtons();
     renderPlayerProfiles();
+    resetClocks();
     renderBoard();
     updateStatus();
     setupEventListeners();
@@ -288,6 +329,7 @@
   // --- Move History Stepping (Back / Forward) ---
   function stepBack() {
     if (currentViewIndex > 0) {
+      stopClock();
       currentViewIndex--;
       selectedSquare = null;
       legalMovesForSelected = [];
@@ -303,6 +345,9 @@
       legalMovesForSelected = [];
       renderView();
       chessAudio.playMove();
+      if (isViewingLive() && !game.game_over() && historyMoves.length >= 1) {
+        startClock();
+      }
     }
   }
 
@@ -400,6 +445,15 @@
     renderBoard(game);
     updateStatus();
     updateHistoryNavButtons();
+
+    // Start or continue clocks
+    if (!game.game_over()) {
+      if (historyMoves.length === 1) {
+        startClock();
+      } else if (!clockInterval && (playerTimeSettings.w !== 'infinite' || playerTimeSettings.b !== 'infinite')) {
+        startClock();
+      }
+    }
 
     // Check for game over
     checkGameOver();
@@ -672,6 +726,7 @@
   // --- Checkmate & Game Over Handling ---
   function checkGameOver() {
     if (!game.game_over()) return;
+    stopClock();
 
     let title = 'Game Over';
     let winnerText = '';
@@ -860,6 +915,258 @@
     }
   }
 
+  // --- Game Timers & Clocks Mechanics ---
+  function formatClockDisplay(seconds) {
+    if (seconds === Infinity || seconds === 'infinite' || seconds === undefined) return '∞';
+    if (seconds <= 0) return '0:00';
+    if (seconds < 10) return seconds.toFixed(1) + 's';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
+  function getTimerSummaryLabel() {
+    function formatSetting(val) {
+      if (val === 'infinite') return '∞';
+      const m = Math.round(Number(val) / 60);
+      return `${m}m`;
+    }
+    if (playerTimeSettings.w === playerTimeSettings.b) {
+      return formatSetting(playerTimeSettings.w);
+    }
+    return `${formatSetting(playerTimeSettings.w)}/${formatSetting(playerTimeSettings.b)}`;
+  }
+
+  function updateClockDisplays() {
+    if (clockBottom) clockBottom.textContent = formatClockDisplay(playerTimeLeft.w);
+    if (clockTop) clockTop.textContent = formatClockDisplay(playerTimeLeft.b);
+    if (timerPillLabel) timerPillLabel.textContent = getTimerSummaryLabel();
+
+    // Low-time warning (< 20s, non-infinite)
+    if (clockBottom) {
+      if (playerTimeLeft.w !== Infinity && playerTimeLeft.w <= 20 && playerTimeLeft.w > 0) {
+        clockBottom.classList.add('low-time');
+      } else {
+        clockBottom.classList.remove('low-time');
+      }
+    }
+    if (clockTop) {
+      if (playerTimeLeft.b !== Infinity && playerTimeLeft.b <= 20 && playerTimeLeft.b > 0) {
+        clockTop.classList.add('low-time');
+      } else {
+        clockTop.classList.remove('low-time');
+      }
+    }
+  }
+
+  function resetClocks() {
+    stopClock();
+    playerTimeLeft.w = playerTimeSettings.w === 'infinite' ? Infinity : Number(playerTimeSettings.w);
+    playerTimeLeft.b = playerTimeSettings.b === 'infinite' ? Infinity : Number(playerTimeSettings.b);
+    updateClockDisplays();
+  }
+
+  function startClock() {
+    if (clockInterval) return;
+    if (game.game_over()) return;
+    // Clocks start counting down once White has made move 1
+    if (historyMoves.length === 0) return;
+
+    lastClockTimestamp = performance.now();
+    clockInterval = setInterval(tickClock, 100);
+  }
+
+  function stopClock() {
+    if (clockInterval) {
+      clearInterval(clockInterval);
+      clockInterval = null;
+    }
+  }
+
+  function tickClock() {
+    if (game.game_over() || !isViewingLive()) {
+      stopClock();
+      return;
+    }
+
+    const now = performance.now();
+    const elapsedSeconds = (now - lastClockTimestamp) / 1000;
+    lastClockTimestamp = now;
+
+    const currentTurn = game.turn(); // 'w' or 'b'
+    if (playerTimeLeft[currentTurn] !== Infinity) {
+      const prevInt = Math.floor(playerTimeLeft[currentTurn]);
+      playerTimeLeft[currentTurn] = Math.max(0, playerTimeLeft[currentTurn] - elapsedSeconds);
+      const currInt = Math.floor(playerTimeLeft[currentTurn]);
+
+      // Soft audio tick warning when under 10 seconds on integer second boundary
+      if (currInt < 10 && currInt > 0 && currInt !== prevInt && typeof chessAudio !== 'undefined') {
+        chessAudio.playTick();
+      }
+
+      updateClockDisplays();
+
+      if (playerTimeLeft[currentTurn] <= 0) {
+        handleTimeout(currentTurn);
+      }
+    }
+  }
+
+  function handleTimeout(timedOutColor) {
+    stopClock();
+    const winningColor = timedOutColor === 'w' ? 'b' : 'w';
+    const winningPlayer = playerProfiles[winningColor].name;
+
+    // FIDE Article 6.9: if opponent has insufficient mating material, outcome is a draw
+    const hasMaterial = hasSufficientMaterialToMate(winningColor);
+
+    let title = 'Time Out';
+    let winnerText = '';
+    let outcome = '1/2 - 1/2';
+
+    if (hasMaterial) {
+      winnerText = `${winningPlayer} won on time`;
+      outcome = winningColor === 'w' ? '1 - 0' : '0 - 1';
+    } else {
+      title = 'Draw';
+      winnerText = 'Time out vs Insufficient Material';
+      outcome = '1/2 - 1/2';
+    }
+
+    if (typeof chessAudio !== 'undefined') {
+      chessAudio.playTimeout();
+    }
+
+    gameOverTitle.textContent = title;
+    gameOverWinner.textContent = winnerText;
+    statMoves.textContent = Math.ceil(game.history().length / 2);
+    statOutcome.textContent = outcome;
+
+    const avatarType = playerProfiles[winningColor].avatar;
+    const isDark = currentTheme === 'dark';
+    const colorHex = isDark ? '#e6e6e6' : PIECE_COLORS[winningColor];
+    gameOverAvatar.innerHTML = getPieceSvg(avatarType, colorHex, 40);
+
+    setTimeout(() => {
+      gameOverModal.style.display = 'flex';
+    }, 300);
+  }
+
+  function hasSufficientMaterialToMate(color) {
+    const board = game.board();
+    let knights = 0;
+    let bishops = 0;
+    let hasMajorOrPawn = false;
+
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = board[r][c];
+        if (piece && piece.color === color) {
+          if (piece.type === 'p' || piece.type === 'q' || piece.type === 'r') {
+            hasMajorOrPawn = true;
+          } else if (piece.type === 'b') {
+            bishops++;
+          } else if (piece.type === 'n') {
+            knights++;
+          }
+        }
+      }
+    }
+
+    if (hasMajorOrPawn) return true;
+    if (bishops >= 2) return true;
+    if (bishops >= 1 && knights >= 1) return true;
+    if (knights >= 2) return true;
+    return false;
+  }
+
+  // --- Centered Timer Modal Controller ---
+  function openTimerModal() {
+    modalTimeSettings = { ...playerTimeSettings };
+    modalStepperMins = {
+      w: typeof modalTimeSettings.w === 'number' ? Math.max(1, Math.round(modalTimeSettings.w / 60)) : 5,
+      b: typeof modalTimeSettings.b === 'number' ? Math.max(1, Math.round(modalTimeSettings.b / 60)) : 5
+    };
+
+    if (timerNameW) timerNameW.textContent = playerProfiles.w.name;
+    if (timerNameB) timerNameB.textContent = playerProfiles.b.name;
+
+    const areSynced = modalTimeSettings.w === modalTimeSettings.b;
+    if (timerSyncToggle) timerSyncToggle.checked = areSynced;
+
+    renderModalPlayerTimer('w');
+    renderModalPlayerTimer('b');
+
+    if (timerModal) timerModal.style.display = 'flex';
+  }
+
+  function closeTimerModal() {
+    if (timerModal) timerModal.style.display = 'none';
+  }
+
+  function renderModalPlayerTimer(player) {
+    const currentVal = modalTimeSettings[player];
+    const isCustom = typeof currentVal === 'number' && ![60, 180, 600].includes(currentVal);
+    const container = document.querySelector(`.timer-presets[data-player="${player}"]`);
+    if (!container) return;
+
+    const pills = container.querySelectorAll('.preset-pill');
+    pills.forEach(pill => {
+      const dataTime = pill.dataset.time;
+      let active = false;
+      if (dataTime === 'infinite' && currentVal === 'infinite') active = true;
+      else if (dataTime === 'custom' && isCustom) active = true;
+      else if (String(currentVal) === dataTime) active = true;
+
+      if (active) pill.classList.add('active');
+      else pill.classList.remove('active');
+    });
+
+    const customRow = document.getElementById(`timer-custom-row-${player}`);
+    const stepperVal = document.getElementById(`stepper-val-${player}`);
+    if (customRow && stepperVal) {
+      if (isCustom) {
+        customRow.style.display = 'flex';
+        stepperVal.textContent = modalStepperMins[player];
+      } else {
+        customRow.style.display = 'none';
+      }
+    }
+  }
+
+  function setModalPlayerTime(player, value) {
+    modalTimeSettings[player] = value;
+    if (timerSyncToggle && timerSyncToggle.checked) {
+      const other = player === 'w' ? 'b' : 'w';
+      modalTimeSettings[other] = value;
+      modalStepperMins[other] = modalStepperMins[player];
+      renderModalPlayerTimer(other);
+    }
+    renderModalPlayerTimer(player);
+  }
+
+  function adjustStepper(player, delta) {
+    let current = modalStepperMins[player] + delta;
+    if (current < 1) current = 1;
+    if (current > 60) current = 60;
+    modalStepperMins[player] = current;
+    setModalPlayerTime(player, current * 60);
+  }
+
+  function applyTimerSettings() {
+    playerTimeSettings = { ...modalTimeSettings };
+    try {
+      localStorage.setItem('minchess_timer_settings_v2', JSON.stringify(playerTimeSettings));
+    } catch (e) {}
+
+    resetClocks();
+    closeTimerModal();
+
+    if (historyMoves.length >= 1 && !game.game_over()) {
+      startClock();
+    }
+  }
+
   function setupEventListeners() {
     // Square click
     chessboardEl.addEventListener('click', e => {
@@ -933,6 +1240,9 @@
         currentViewIndex = historyFens.length - 1;
         selectedSquare = null;
         legalMovesForSelected = [];
+        if (historyMoves.length === 0) {
+          resetClocks();
+        }
         renderBoard(game);
         updateStatus();
         updateHistoryNavButtons();
@@ -946,6 +1256,52 @@
         startNewGame();
       }
     });
+
+    // Timer triggers
+    if (btnTimer) btnTimer.addEventListener('click', openTimerModal);
+    if (clockTop) clockTop.addEventListener('click', openTimerModal);
+    if (clockBottom) clockBottom.addEventListener('click', openTimerModal);
+    if (btnApplyTimer) btnApplyTimer.addEventListener('click', applyTimerSettings);
+    if (btnCancelTimer) btnCancelTimer.addEventListener('click', closeTimerModal);
+
+    if (timerModal) {
+      timerModal.addEventListener('click', e => {
+        if (e.target === timerModal) closeTimerModal();
+      });
+    }
+
+    // Timer presets
+    document.querySelectorAll('.timer-presets .preset-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const player = btn.parentElement.dataset.player;
+        const timeVal = btn.dataset.time;
+        if (timeVal === 'infinite') {
+          setModalPlayerTime(player, 'infinite');
+        } else if (timeVal === 'custom') {
+          setModalPlayerTime(player, modalStepperMins[player] * 60);
+        } else {
+          setModalPlayerTime(player, Number(timeVal));
+        }
+      });
+    });
+
+    // Timer minute steppers
+    const decW = document.getElementById('stepper-dec-w');
+    const incW = document.getElementById('stepper-inc-w');
+    const decB = document.getElementById('stepper-dec-b');
+    const incB = document.getElementById('stepper-inc-b');
+    if (decW) decW.addEventListener('click', () => adjustStepper('w', -1));
+    if (incW) incW.addEventListener('click', () => adjustStepper('w', 1));
+    if (decB) decB.addEventListener('click', () => adjustStepper('b', -1));
+    if (incB) incB.addEventListener('click', () => adjustStepper('b', 1));
+
+    if (timerSyncToggle) {
+      timerSyncToggle.addEventListener('change', () => {
+        if (timerSyncToggle.checked) {
+          setModalPlayerTime('w', modalTimeSettings.w);
+        }
+      });
+    }
 
     // History drawer
     btnHistory.addEventListener('click', () => {
@@ -1003,6 +1359,7 @@
     selectedSquare = null;
     legalMovesForSelected = [];
     manualBoardFlipped = false;
+    resetClocks();
     renderBoard(game);
     updateStatus();
     updateHistoryNavButtons();

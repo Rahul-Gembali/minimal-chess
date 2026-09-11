@@ -147,6 +147,59 @@ class ChessAudio {
       });
     } catch (e) {}
   }
+
+  // Soft procedural clock tick (< 10s warning)
+  playTick() {
+    if (this.muted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.025);
+
+      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.025);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.028);
+    } catch (e) {}
+  }
+
+  // Gentle timeout chime when clock expires
+  playTimeout() {
+    if (this.muted) return;
+    try {
+      this.initContext();
+      if (!this.ctx) return;
+
+      const tones = [330, 220]; // E4 down to A3
+      tones.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const t = this.ctx.currentTime + idx * 0.15;
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+
+        gain.gain.setValueAtTime(0.18, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(t);
+        osc.stop(t + 0.35);
+      });
+    } catch (e) {}
+  }
 }
 
 var chessAudio = new ChessAudio();
