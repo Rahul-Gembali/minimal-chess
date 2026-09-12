@@ -143,6 +143,29 @@ body {
   flex-shrink: 0;
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.brand-logo {
+  width: 19px;
+  height: 19px;
+  display: block;
+  flex-shrink: 0;
+  color: var(--text-primary);
+  opacity: 0.88;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.brand:hover .brand-logo {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
 .brand-title {
   font-size: 11px;
   font-weight: 700;
