@@ -1904,3 +1904,259 @@ body.online-not-my-turn .board .square {
   cursor: default;
 }
 
+/* --------------------------------------------------------------------------
+   Game Review & Analysis Modal Styling
+   -------------------------------------------------------------------------- */
+.review-card {
+  max-width: 400px;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.review-calc-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(2, 132, 199, 0.08);
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  animation: review-spin 2s linear infinite;
+}
+
+.review-calc-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+@keyframes review-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.review-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--border-light);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin: 18px 0 8px;
+}
+
+.review-progress-bar {
+  height: 100%;
+  background: #0284c7;
+  border-radius: 9999px;
+  transition: width 0.15s ease-out;
+}
+
+.review-progress-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Accuracy Cards */
+.review-accuracy-container {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.accuracy-card {
+  flex: 1;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+  transition: transform 0.15s ease;
+}
+
+.accuracy-player-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.accuracy-player-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.accuracy-score {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin: 2px 0;
+}
+
+.accuracy-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/* Move Classification Breakdown Table */
+.review-breakdown-table {
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-card);
+  margin-bottom: 4px;
+}
+
+.review-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12.5px;
+}
+
+.review-breakdown-row:last-child {
+  border-bottom: none;
+}
+
+.review-breakdown-row.header-row {
+  background: var(--bg-canvas);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 6px 12px;
+}
+
+.breakdown-col-count,
+.breakdown-count {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  width: 32px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.breakdown-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.badge-brilliant {
+  color: #0891b2;
+  background: rgba(8, 145, 178, 0.1);
+}
+
+.badge-best {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.badge-good {
+  color: #65a30d;
+  background: rgba(101, 163, 13, 0.1);
+}
+
+.badge-book {
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.1);
+}
+
+.badge-inaccuracy {
+  color: #ca8a04;
+  background: rgba(202, 138, 4, 0.1);
+}
+
+.badge-mistake {
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.1);
+}
+
+.badge-blunder {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+/* Interactive Move Review Banner on Board */
+.move-review-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-light);
+  border-radius: 9px;
+  padding: 6px 12px;
+  margin: 0 auto 6px;
+  max-width: 480px;
+  width: 100%;
+  animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.review-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.review-banner-info {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex: 1;
+  text-align: left;
+}
+
+.btn-review-back-modal {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: #111111;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-review-back-modal:hover {
+  background: #333333;
+}
+
+[data-theme="dark"] .btn-review-back-modal {
+  background: #f2f2f2;
+  color: #111111;
+}
+
+/* Move badge icons in move history list */
+.history-item .move-eval-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+

@@ -134,6 +134,16 @@
         </div>
       </section>
 
+      <!-- Interactive Move Review Banner (visible during move inspection) -->
+      <div class="move-review-banner" id="move-review-banner" style="display: none;">
+        <div class="review-banner-badge" id="review-banner-badge">
+          <span class="badge-icon" id="banner-badge-icon">🎯</span>
+          <span class="badge-label" id="banner-badge-label">Best</span>
+        </div>
+        <div class="review-banner-info" id="review-banner-info">e4 • Accuracy 100%</div>
+        <button type="button" class="btn-review-back-modal" id="btn-reopen-review" title="View Full Game Review">Review</button>
+      </div>
+
       <!-- The Minimalist Chessboard Container -->
       <div class="board-wrapper">
         <div class="board-container" id="board-container">
@@ -239,8 +249,9 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button id="btn-play-again" class="btn-primary">Play Again</button>
-        <button id="btn-dismiss-modal" class="btn-secondary">Review Board</button>
+        <button id="btn-review-game-prompt" class="btn-primary" style="background: #0284c7; color: #ffffff;">Review Game</button>
+        <button id="btn-play-again" class="btn-secondary">Play Again</button>
+        <button id="btn-dismiss-modal" class="btn-secondary" style="display: none;">Review Board</button>
       </div>
     </div>
   </div>
@@ -420,6 +431,114 @@
     </div>
   </div>
 
+  <!-- Game Review & Move Analysis Modal Dialog -->
+  <div class="modal-overlay" id="review-modal" style="display: none;">
+    <div class="modal-card review-card">
+      
+      <!-- Calculating Progress State -->
+      <div id="review-calc-state">
+        <div class="review-calc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+          </svg>
+        </div>
+        <h3 class="modal-title" style="margin-top: 14px;">Reviewing Game</h3>
+        <p class="modal-subtitle">Stockfish is analyzing moves client-side...</p>
+        <div class="review-progress-track">
+          <div class="review-progress-bar" id="review-progress-bar" style="width: 0%;"></div>
+        </div>
+        <div class="review-progress-text" id="review-progress-text">Analyzing move 1/1 (0%)...</div>
+      </div>
+
+      <!-- Results Summary State -->
+      <div id="review-results-state" style="display: none;">
+        <div class="modal-header">
+          <h3 class="modal-title">Game Review</h3>
+          <p class="modal-subtitle" id="review-outcome-text">Match analysis completed</p>
+        </div>
+
+        <!-- Accuracy Cards -->
+        <div class="review-accuracy-container">
+          <div class="accuracy-card accuracy-card-w">
+            <div class="accuracy-player-info">
+              <span class="player-color-dot white-dot"></span>
+              <span class="accuracy-player-name" id="review-name-w">White</span>
+            </div>
+            <div class="accuracy-score" id="review-acc-w">--%</div>
+            <div class="accuracy-label">Accuracy</div>
+          </div>
+          <div class="accuracy-card accuracy-card-b">
+            <div class="accuracy-player-info">
+              <span class="player-color-dot black-dot"></span>
+              <span class="accuracy-player-name" id="review-name-b">Black</span>
+            </div>
+            <div class="accuracy-score" id="review-acc-b">--%</div>
+            <div class="accuracy-label">Accuracy</div>
+          </div>
+        </div>
+
+        <!-- Classification Breakdown Table -->
+        <div class="review-breakdown-table">
+          <div class="review-breakdown-row header-row">
+            <span class="breakdown-col-count" id="breakdown-header-w">White</span>
+            <span class="breakdown-col-label">Classification</span>
+            <span class="breakdown-col-count" id="breakdown-header-b">Black</span>
+          </div>
+
+          <div class="review-breakdown-row">
+            <span class="breakdown-count" id="count-w-brilliant">0</span>
+            <div class="breakdown-badge badge-brilliant"><span class="badge-icon">💎</span> Brilliant</div>
+            <span class="breakdown-count" id="count-b-brilliant">0</span>
+          </div>
+
+          <div class="review-breakdown-row">
+            <span class="breakdown-count" id="count-w-best">0</span>
+            <div class="breakdown-badge badge-best"><span class="badge-icon">🎯</span> Best</div>
+            <span class="breakdown-count" id="count-b-best">0</span>
+          </div>
+
+          <div class="review-breakdown-row">
+            <span class="breakdown-count" id="count-w-good">0</span>
+            <div class="breakdown-badge badge-good"><span class="badge-icon">👍</span> Good</div>
+            <span class="breakdown-count" id="count-b-good">0</span>
+          </div>
+
+          <div class="review-breakdown-row">
+            <span class="breakdown-count" id="count-w-book">0</span>
+            <div class="breakdown-badge badge-book"><span class="badge-icon">📖</span> Book</div>
+            <span class="breakdown-count" id="count-b-book">0</span>
+          </div>
+
+          <div class="review-breakdown-row">
+            <span class="breakdown-count" id="count-w-inaccuracy">0</span>
+            <div class="breakdown-badge badge-inaccuracy"><span class="badge-icon">❓</span> Inaccuracy</div>
+            <span class="breakdown-count" id="count-b-inaccuracy">0</span>
+          </div>
+
+          <div class="review-breakdown-row">
+            <span class="breakdown-count" id="count-w-mistake">0</span>
+            <div class="breakdown-badge badge-mistake"><span class="badge-icon">❓❓</span> Mistake</div>
+            <span class="breakdown-count" id="count-b-mistake">0</span>
+          </div>
+
+          <div class="review-breakdown-row">
+            <span class="breakdown-count" id="count-w-blunder">0</span>
+            <div class="breakdown-badge badge-blunder"><span class="badge-icon">❌</span> Blunder</div>
+            <span class="breakdown-count" id="count-b-blunder">0</span>
+          </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 20px; flex-direction: column; gap: 8px;">
+          <button type="button" id="btn-review-inspect" class="btn-primary" style="width: 100%;">Review Moves on Board</button>
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <button type="button" id="btn-review-play-again" class="btn-secondary" style="flex: 1;">Play Again</button>
+            <button type="button" id="btn-review-close" class="btn-secondary" style="flex: 1;">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Move History Side Drawer -->
   <div class="drawer-overlay" id="history-overlay" style="display: none;">
     <div class="drawer-panel">
@@ -439,11 +558,12 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/paho-mqtt.min.js?v=2.8"></script>
-  <script src="js/multiplayer.js?v=2.8"></script>
-  <script src="js/chess.js?v=2.8"></script>
-  <script src="js/pieces.js?v=2.8"></script>
-  <script src="js/audio.js?v=2.8"></script>
-  <script src="js/app.js?v=2.8"></script>
+  <script src="js/paho-mqtt.min.js?v=2.9"></script>
+  <script src="js/multiplayer.js?v=2.9"></script>
+  <script src="js/chess.js?v=2.9"></script>
+  <script src="js/pieces.js?v=2.9"></script>
+  <script src="js/analysis.js?v=2.9"></script>
+  <script src="js/audio.js?v=2.9"></script>
+  <script src="js/app.js?v=2.9"></script>
 </body>
 </html>

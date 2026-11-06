@@ -80,6 +80,44 @@
   const statOutcome = document.getElementById('stat-outcome');
   const btnPlayAgain = document.getElementById('btn-play-again');
   const btnDismissModal = document.getElementById('btn-dismiss-modal');
+  const btnReviewGamePrompt = document.getElementById('btn-review-game-prompt');
+
+  // Game Review & Move Analysis Modal DOM Elements
+  const reviewModal = document.getElementById('review-modal');
+  const reviewCalcState = document.getElementById('review-calc-state');
+  const reviewResultsState = document.getElementById('review-results-state');
+  const reviewProgressBar = document.getElementById('review-progress-bar');
+  const reviewProgressText = document.getElementById('review-progress-text');
+  const reviewOutcomeText = document.getElementById('review-outcome-text');
+  const reviewNameW = document.getElementById('review-name-w');
+  const reviewNameB = document.getElementById('review-name-b');
+  const reviewAccW = document.getElementById('review-acc-w');
+  const reviewAccB = document.getElementById('review-acc-b');
+  const breakdownHeaderW = document.getElementById('breakdown-header-w');
+  const breakdownHeaderB = document.getElementById('breakdown-header-b');
+  const btnReviewInspect = document.getElementById('btn-review-inspect');
+  const btnReviewPlayAgain = document.getElementById('btn-review-play-again');
+  const btnReviewClose = document.getElementById('btn-review-close');
+
+  const moveReviewBanner = document.getElementById('move-review-banner');
+  const reviewBannerBadge = document.getElementById('review-banner-badge');
+  const bannerBadgeIcon = document.getElementById('banner-badge-icon');
+  const bannerBadgeLabel = document.getElementById('banner-badge-label');
+  const reviewBannerInfo = document.getElementById('review-banner-info');
+  const btnReopenReview = document.getElementById('btn-reopen-review');
+
+  let currentReviewData = null;
+  let isReviewModeActive = false;
+
+  const CLASSIFICATION_META = {
+    brilliant: { icon: '💎', label: 'Brilliant', class: 'badge-brilliant' },
+    best: { icon: '🎯', label: 'Best', class: 'badge-best' },
+    good: { icon: '👍', label: 'Good', class: 'badge-good' },
+    book: { icon: '📖', label: 'Book', class: 'badge-book' },
+    inaccuracy: { icon: '❓', label: 'Inaccuracy', class: 'badge-inaccuracy' },
+    mistake: { icon: '❓❓', label: 'Mistake', class: 'badge-mistake' },
+    blunder: { icon: '❌', label: 'Blunder', class: 'badge-blunder' }
+  };
 
   // Name modal
   const nameModal = document.getElementById('name-modal');
@@ -428,6 +466,7 @@
     renderBoard(activeGame);
     updateStatusForGame(activeGame, historyMoves.slice(0, currentViewIndex));
     updateHistoryNavButtons();
+    updateMoveReviewBanner();
   }
 
   function updateHistoryNavButtons() {
@@ -834,12 +873,30 @@
       const whiteMove = history[i].san;
       const blackMove = history[i + 1] ? history[i + 1].san : '';
 
+      let whiteBadgeHtml = '';
+      let blackBadgeHtml = '';
+
+      if (currentReviewData && currentReviewData.moveReviews) {
+        const revW = currentReviewData.moveReviews[i];
+        if (revW && CLASSIFICATION_META[revW.classification]) {
+          const metaW = CLASSIFICATION_META[revW.classification];
+          whiteBadgeHtml = `<span class="move-eval-badge ${metaW.class}" title="${metaW.label}">${metaW.icon}</span>`;
+        }
+        if (history[i + 1]) {
+          const revB = currentReviewData.moveReviews[i + 1];
+          if (revB && CLASSIFICATION_META[revB.classification]) {
+            const metaB = CLASSIFICATION_META[revB.classification];
+            blackBadgeHtml = `<span class="move-eval-badge ${metaB.class}" title="${metaB.label}">${metaB.icon}</span>`;
+          }
+        }
+      }
+
       const row = document.createElement('div');
       row.className = 'history-row';
       row.innerHTML = `
         <span class="history-num">${moveNum}.</span>
-        <span class="history-move">${whiteMove}</span>
-        <span class="history-move">${blackMove}</span>
+        <span class="history-move" data-move-idx="${i}">${whiteMove} ${whiteBadgeHtml}</span>
+        <span class="history-move" data-move-idx="${i + 1}">${blackMove} ${blackBadgeHtml}</span>
       `;
       historyList.appendChild(row);
     }
@@ -896,6 +953,9 @@
 
     setTimeout(() => {
       gameOverModal.style.display = 'flex';
+      if (historyMoves.length > 0) {
+        startAutomaticGameReview(title, winnerText, outcome);
+      }
     }, 400);
   }
 
@@ -1212,6 +1272,9 @@
 
     setTimeout(() => {
       gameOverModal.style.display = 'flex';
+      if (historyMoves.length > 0) {
+        startAutomaticGameReview(title, winnerText, outcome);
+      }
     }, 300);
   }
 
@@ -1241,6 +1304,114 @@
     if (bishops >= 1 && knights >= 1) return true;
     if (knights >= 2) return true;
     return false;
+  }
+
+  // --- Game Review & Move Analysis Handling ---
+  function closeReviewModal() {
+    if (reviewModal) reviewModal.style.display = 'none';
+  }
+
+  async function startAutomaticGameReview(title = 'Game Over', winnerText = '', outcome = '') {
+    if (gameOverModal) gameOverModal.style.display = 'none';
+    if (!reviewModal || historyMoves.length === 0) return;
+
+    reviewModal.style.display = 'flex';
+    if (reviewCalcState) reviewCalcState.style.display = 'block';
+    if (reviewResultsState) reviewResultsState.style.display = 'none';
+    if (reviewProgressBar) reviewProgressBar.style.width = '0%';
+    if (reviewProgressText) reviewProgressText.textContent = 'Initializing Stockfish engine...';
+
+    const gameOutcomeLabel = winnerText ? `${winnerText} (${outcome})` : title;
+    if (reviewOutcomeText) reviewOutcomeText.textContent = gameOutcomeLabel;
+
+    try {
+      if (typeof chessAnalysisEngine === 'undefined') {
+        throw new Error('Analysis engine not loaded');
+      }
+
+      const report = await chessAnalysisEngine.analyzeGame(historyFens, historyMoves, (curr, total, pct) => {
+        if (reviewProgressBar) reviewProgressBar.style.width = pct + '%';
+        if (reviewProgressText) reviewProgressText.textContent = `Analyzing move ${curr}/${total} (${pct}%)...`;
+      });
+
+      currentReviewData = report;
+
+      if (reviewNameW) reviewNameW.textContent = playerProfiles.w.name;
+      if (reviewNameB) reviewNameB.textContent = playerProfiles.b.name;
+      if (breakdownHeaderW) breakdownHeaderW.textContent = playerProfiles.w.name;
+      if (breakdownHeaderB) breakdownHeaderB.textContent = playerProfiles.b.name;
+
+      if (reviewAccW) reviewAccW.textContent = `${report.whiteAccuracy}%`;
+      if (reviewAccB) reviewAccB.textContent = `${report.blackAccuracy}%`;
+
+      const setBadgeCount = (id, count) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = count || 0;
+      };
+
+      setBadgeCount('count-w-brilliant', report.counts.w.brilliant);
+      setBadgeCount('count-b-brilliant', report.counts.b.brilliant);
+      setBadgeCount('count-w-best', report.counts.w.best);
+      setBadgeCount('count-b-best', report.counts.b.best);
+      setBadgeCount('count-w-good', report.counts.w.good);
+      setBadgeCount('count-b-good', report.counts.b.good);
+      setBadgeCount('count-w-book', report.counts.w.book);
+      setBadgeCount('count-b-book', report.counts.b.book);
+      setBadgeCount('count-w-inaccuracy', report.counts.w.inaccuracy);
+      setBadgeCount('count-b-inaccuracy', report.counts.b.inaccuracy);
+      setBadgeCount('count-w-mistake', report.counts.w.mistake);
+      setBadgeCount('count-b-mistake', report.counts.b.mistake);
+      setBadgeCount('count-w-blunder', report.counts.w.blunder);
+      setBadgeCount('count-b-blunder', report.counts.b.blunder);
+
+      updateHistoryList(historyMoves);
+
+      if (reviewCalcState) reviewCalcState.style.display = 'none';
+      if (reviewResultsState) reviewResultsState.style.display = 'block';
+
+      if (typeof chessAudio !== 'undefined') chessAudio.playCheck();
+      if (typeof chessHaptics !== 'undefined') chessHaptics.capture();
+    } catch (err) {
+      console.error('Game analysis error:', err);
+      closeReviewModal();
+      if (gameOverModal) gameOverModal.style.display = 'flex';
+      showToast('Game review could not be completed.');
+    }
+  }
+
+  function updateMoveReviewBanner() {
+    if (!moveReviewBanner) return;
+    if (!currentReviewData || !isReviewModeActive || currentViewIndex === 0) {
+      moveReviewBanner.style.display = 'none';
+      return;
+    }
+
+    const moveIndex = currentViewIndex - 1;
+    const review = currentReviewData.moveReviews[moveIndex];
+    if (!review) {
+      moveReviewBanner.style.display = 'none';
+      return;
+    }
+
+    const meta = CLASSIFICATION_META[review.classification] || CLASSIFICATION_META.good;
+    if (bannerBadgeIcon) bannerBadgeIcon.textContent = meta.icon;
+    if (bannerBadgeLabel) bannerBadgeLabel.textContent = meta.label;
+    if (reviewBannerBadge) {
+      reviewBannerBadge.className = 'review-banner-badge ' + meta.class;
+    }
+
+    let evalText = '';
+    if (review.evalCp !== undefined && review.evalCp !== null) {
+      const evalVal = (review.evalCp / 100).toFixed(1);
+      evalText = ` • Eval: ${evalVal > 0 ? '+' : ''}${evalVal}`;
+    }
+
+    if (reviewBannerInfo) {
+      const moveName = review.san || review.uci;
+      reviewBannerInfo.textContent = `${moveName} • Accuracy ${review.accuracy}%${evalText}`;
+    }
+
+    moveReviewBanner.style.display = 'flex';
   }
 
   // --- Floating Toast Notification ---
@@ -1556,6 +1727,62 @@
     btnDismissModal.addEventListener('click', () => {
       gameOverModal.style.display = 'none';
     });
+
+    if (btnReviewGamePrompt) {
+      btnReviewGamePrompt.addEventListener('click', () => {
+        gameOverModal.style.display = 'none';
+        startAutomaticGameReview(gameOverTitle.textContent, gameOverWinner.textContent, statOutcome.textContent);
+      });
+    }
+
+    if (btnReviewInspect) {
+      btnReviewInspect.addEventListener('click', () => {
+        closeReviewModal();
+        isReviewModeActive = true;
+        currentViewIndex = historyMoves.length;
+        renderView();
+        showToast('Use Back/Forward buttons or Move History to review moves.');
+      });
+    }
+
+    if (btnReviewPlayAgain) {
+      btnReviewPlayAgain.addEventListener('click', () => {
+        closeReviewModal();
+        if (isOnlineMatch && typeof chessMultiplayer !== 'undefined') {
+          chessMultiplayer.requestRematch();
+        } else {
+          startNewGame();
+        }
+      });
+    }
+
+    if (btnReviewClose) {
+      btnReviewClose.addEventListener('click', closeReviewModal);
+    }
+
+    if (btnReopenReview) {
+      btnReopenReview.addEventListener('click', () => {
+        if (reviewModal && currentReviewData) {
+          if (reviewCalcState) reviewCalcState.style.display = 'none';
+          if (reviewResultsState) reviewResultsState.style.display = 'block';
+          reviewModal.style.display = 'flex';
+        }
+      });
+    }
+
+    if (historyList) {
+      historyList.addEventListener('click', (e) => {
+        const moveSpan = e.target.closest('.history-move');
+        if (moveSpan && moveSpan.dataset.moveIdx !== undefined) {
+          const idx = parseInt(moveSpan.dataset.moveIdx, 10);
+          if (!isNaN(idx) && idx + 1 < historyFens.length) {
+            currentViewIndex = idx + 1;
+            renderView();
+            if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+          }
+        }
+      });
+    }
 
     // Multiplayer triggers
     if (btnMultiplayer) {
@@ -1930,6 +2157,13 @@
   }
 
   function startNewGame(playSound = true) {
+    currentReviewData = null;
+    isReviewModeActive = false;
+    if (moveReviewBanner) moveReviewBanner.style.display = 'none';
+    if (reviewModal) reviewModal.style.display = 'none';
+    if (typeof chessAnalysisEngine !== 'undefined') {
+      chessAnalysisEngine.terminate();
+    }
     game = new Chess();
     historyFens = [game.fen()];
     historyMoves = [];
@@ -1942,6 +2176,7 @@
     renderBoard(game);
     updateStatus();
     updateHistoryNavButtons();
+    updateHistoryList([]);
     if (playSound) chessAudio.playMove();
   }
 
@@ -1949,6 +2184,8 @@
   window.joinOnlineMatch = joinOnlineMatch;
   window.leaveOnlineMatch = leaveOnlineMatch;
   window.openMultiplayerModal = openMultiplayerModal;
+  window.startAutomaticGameReview = startAutomaticGameReview;
+  window.closeReviewModal = closeReviewModal;
 
   // Launch!
   init();
