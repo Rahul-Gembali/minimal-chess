@@ -41,6 +41,17 @@
         <span class="brand-title">MINIMAL CHESS</span>
       </div>
       <div class="header-actions">
+        <button id="btn-multiplayer" class="icon-btn circle-btn" title="Play with a Friend (Multiplayer)" aria-label="Multiplayer">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </button>
+        <button id="btn-mp-status" class="icon-btn circle-btn mp-status-btn" title="Multiplayer Status: Local play" aria-label="Connection Status">
+          <span class="mp-status-dot" id="mp-status-dot"></span>
+        </button>
         <button id="btn-timer" class="icon-btn header-timer-btn" title="Game Timers" aria-label="Game Timers">
           <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
@@ -338,6 +349,60 @@
     </div>
   </div>
 
+  <!-- Centered Multiplayer Modal Dialog -->
+  <div class="modal-overlay" id="multiplayer-modal" style="display: none;">
+    <div class="modal-card mp-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="mp-modal-title">Play with a Friend</h3>
+        <p class="modal-subtitle" id="mp-modal-subtitle">Share a link to play together on two devices</p>
+      </div>
+
+      <!-- Creation Section (when not yet in a game) -->
+      <div id="mp-create-section">
+        <div class="mp-option-label">Choose your side:</div>
+        <div class="mp-color-choices" id="mp-color-choices">
+          <button type="button" class="mp-color-pill active" data-color="random">
+            <span class="mp-dice-icon">🎲</span>
+            <span>Random</span>
+          </button>
+          <button type="button" class="mp-color-pill" data-color="w">
+            <span class="player-color-dot white-dot"></span>
+            <span>White</span>
+          </button>
+          <button type="button" class="mp-color-pill" data-color="b">
+            <span class="player-color-dot black-dot"></span>
+            <span>Black</span>
+          </button>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 20px;">
+          <button type="button" id="btn-mp-create" class="btn-primary">Create & Copy Link</button>
+          <button type="button" id="btn-mp-cancel" class="btn-secondary">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Active Match Section (when in an active room) -->
+      <div id="mp-active-section" style="display: none;">
+        <div class="mp-room-info">
+          <div class="mp-room-status-badge" id="mp-room-status-badge">
+            <span class="mp-status-dot waiting" id="mp-modal-status-dot"></span>
+            <span id="mp-room-status-text">Waiting for friend to join...</span>
+          </div>
+          <div class="mp-link-box">
+            <input type="text" id="mp-link-input" class="mp-link-input" readonly />
+            <button type="button" id="btn-mp-copy-link" class="btn-primary" style="padding: 8px 14px; font-size: 13px;">Copy</button>
+          </div>
+          <div class="mp-my-side" id="mp-my-side">Playing as: <strong>White</strong></div>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 18px;">
+          <button type="button" id="btn-mp-leave" class="btn-secondary danger-text">Leave Online Match</button>
+          <button type="button" id="btn-mp-close" class="btn-primary">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Move History Side Drawer -->
   <div class="drawer-overlay" id="history-overlay" style="display: none;">
     <div class="drawer-panel">
@@ -357,9 +422,11 @@
   </div>
 
   <!-- Scripts -->
-  <script src="js/chess.js?v=2.7"></script>
-  <script src="js/pieces.js?v=2.7"></script>
-  <script src="js/audio.js?v=2.7"></script>
-  <script src="js/app.js?v=2.7"></script>
+  <script src="js/paho-mqtt.min.js?v=2.8"></script>
+  <script src="js/multiplayer.js?v=2.8"></script>
+  <script src="js/chess.js?v=2.8"></script>
+  <script src="js/pieces.js?v=2.8"></script>
+  <script src="js/audio.js?v=2.8"></script>
+  <script src="js/app.js?v=2.8"></script>
 </body>
 </html>

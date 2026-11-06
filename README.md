@@ -9,6 +9,11 @@ A clean, distraction-free, two-player pass-and-play chess game designed for mobi
 ## ✨ Highlights & Features
 
 - **Minimalist Aesthetic**: Borderless canvas (`#fdfdfd`), soft gray move indicators, pastel blue move highlights (`#dbeafe`), and clean silhouette pieces in Charcoal (`#262626`) and Soft Grey (`#a8a8a8`).
+- **Online Multiplayer (Zero-Server / Link Sharing)**:
+  - Play online on two separate devices via instant link sharing.
+  - Choose your side: White, Black, or Random.
+  - Real-time connection status indicator dot (turns vibrant green when both players use the same link).
+  - Synchronized moves, timers, game-over detection, and perspective locking with $0 budget and zero backend servers.
 - **Pass-and-Play Ergonomics**:
   - Designed for two players sitting across each other on a table with a phone or laptop.
   - **In-Place Component Rotation**: When Black's turn comes, board pieces, avatar silhouettes, player name, and turn badge smoothly rotate 180° in place so the opposite player views everything right-side up. Zero disorienting card swings.

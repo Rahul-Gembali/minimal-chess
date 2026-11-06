@@ -1682,3 +1682,180 @@ body {
   color: #111111;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
 }
+
+/* --------------------------------------------------------------------------
+   Multiplayer & Online Connection Styles
+   -------------------------------------------------------------------------- */
+.circle-btn {
+  border-radius: 50% !important;
+}
+
+.mp-status-btn {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.mp-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #a3a3a3; /* Neutral inactive gray matching Image 2 */
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.25s ease;
+  display: inline-block;
+}
+
+/* Inactive / Waiting State */
+.mp-status-btn.waiting .mp-status-dot,
+.mp-status-dot.waiting {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+  animation: mp-pulse 1.8s infinite ease-in-out;
+}
+
+/* Active / Connected State (Turns GREEN when 2 people use the same link!) */
+.mp-status-btn.connected .mp-status-dot,
+.mp-status-dot.active,
+.mp-status-dot.connected {
+  background: #22c55e !important; /* Vibrant green */
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.8) !important;
+  animation: mp-glow 2.5s infinite ease-in-out;
+}
+
+@keyframes mp-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 11px rgba(34, 197, 94, 0.95);
+    transform: scale(1.18);
+  }
+}
+
+@keyframes mp-pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+/* Multiplayer Modal Layout */
+.mp-card {
+  max-width: 380px;
+}
+
+.mp-option-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.mp-color-choices {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mp-color-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--border-light);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-ui);
+}
+
+.mp-color-pill:hover {
+  border-color: #c7c7c7;
+}
+
+.mp-color-pill.active {
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
+}
+
+[data-theme="dark"] .mp-color-pill.active {
+  background: #f2f2f2;
+  color: #111111;
+  border-color: #f2f2f2;
+}
+
+.mp-dice-icon {
+  font-size: 14px;
+}
+
+.mp-link-box {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 14px;
+  width: 100%;
+}
+
+.mp-link-input {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.mp-room-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: var(--border-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.mp-my-side {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.danger-text {
+  color: #ef4444 !important;
+}
+
+/* Online Mode Specific UI Adaptations */
+body.in-online-match #btn-pieceflip,
+body.in-online-match #btn-autoflip,
+body.in-online-match #btn-tabletop {
+  display: none !important;
+}
+
+/* When waiting for opponent's turn, non-interactive piece cursor */
+body.online-not-my-turn .board .square {
+  cursor: default;
+}
+

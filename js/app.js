@@ -95,6 +95,32 @@
   const btnCloseAvatarModal = document.getElementById('btn-close-avatar-modal');
   let activeAvatarPlayer = null;
 
+  // --- Multiplayer State & DOM Elements ---
+  let isOnlineMatch = false;
+  let onlineMyColor = 'w'; // 'w' or 'b'
+  let onlineRoomId = null;
+  let onlineSelectedColorChoice = 'random';
+  let isOnlinePeerConnected = false;
+
+  const btnMultiplayer = document.getElementById('btn-multiplayer');
+  const btnMpStatus = document.getElementById('btn-mp-status');
+  const mpStatusDot = document.getElementById('mp-status-dot');
+  const multiplayerModal = document.getElementById('multiplayer-modal');
+  const mpModalTitle = document.getElementById('mp-modal-title');
+  const mpModalSubtitle = document.getElementById('mp-modal-subtitle');
+  const mpCreateSection = document.getElementById('mp-create-section');
+  const mpActiveSection = document.getElementById('mp-active-section');
+  const mpColorChoices = document.getElementById('mp-color-choices');
+  const btnMpCreate = document.getElementById('btn-mp-create');
+  const btnMpCancel = document.getElementById('btn-mp-cancel');
+  const btnMpCopyLink = document.getElementById('btn-mp-copy-link');
+  const btnMpLeave = document.getElementById('btn-mp-leave');
+  const btnMpClose = document.getElementById('btn-mp-close');
+  const mpLinkInput = document.getElementById('mp-link-input');
+  const mpRoomStatusText = document.getElementById('mp-room-status-text');
+  const mpModalStatusDot = document.getElementById('mp-modal-status-dot');
+  const mpMySide = document.getElementById('mp-my-side');
+
   // Game Timers State & Elements
   let playerTimeSettings = { w: 'infinite', b: 'infinite' };
   let playerIsCustom = { w: false, b: false };
@@ -169,6 +195,8 @@
     renderBoard();
     updateStatus();
     setupEventListeners();
+    setupMultiplayer();
+    checkUrlForGame();
   }
 
   // Create 64 squares ONCE in the DOM
@@ -314,6 +342,20 @@
 
   // --- Board Orientation & Turn Rotation ---
   function applyBoardOrientation(activeGame = (isViewingLive() ? game : new Chess(historyFens[currentViewIndex]))) {
+    if (isOnlineMatch) {
+      // In online match: player's assigned color is permanently at the bottom
+      if (onlineMyColor === 'b') {
+        boardContainerEl.classList.add('flipped');
+      } else {
+        boardContainerEl.classList.remove('flipped');
+      }
+      chessboardEl.classList.remove('pieces-facing-black');
+      chessboardEl.classList.remove('tabletop-mode');
+      const topPlayerCard = document.getElementById('player-top');
+      if (topPlayerCard) topPlayerCard.classList.remove('facing-opponent');
+      return;
+    }
+
     const activeTurn = activeGame.turn();
 
     // 1. Board rotation (Auto-flip whole board):
@@ -391,6 +433,12 @@
   function handleSquareClick(squareId) {
     if (game.game_over()) return;
 
+    // In online match: player can only move on their turn
+    if (isOnlineMatch && game.turn() !== onlineMyColor) {
+      showToast("Waiting for opponent's move...");
+      return;
+    }
+
     // If viewing an earlier historical position, jump to live position first!
     if (!isViewingLive()) {
       currentViewIndex = historyFens.length - 1;
@@ -404,6 +452,8 @@
 
     // If square contains active player's piece -> select it
     if (piece && piece.color === currentTurn) {
+      if (isOnlineMatch && piece.color !== onlineMyColor) return;
+
       if (selectedSquare === squareId) {
         // Toggle off
         selectedSquare = null;
@@ -436,7 +486,7 @@
     }
   }
 
-  function executeMove(moveObj) {
+  function executeMove(moveObj, isFromRemote = false) {
     const fromPiece = game.get(moveObj.from);
     const isCapture = Boolean(game.get(moveObj.to) || (fromPiece && fromPiece.type === 'p' && moveObj.from[0] !== moveObj.to[0]));
 
@@ -479,6 +529,11 @@
       }
     }
 
+    // Broadcast move to remote opponent if we made this move locally
+    if (isOnlineMatch && !isFromRemote && typeof chessMultiplayer !== 'undefined') {
+      chessMultiplayer.sendMove(moveObj, game.fen(), playerTimeLeft);
+    }
+
     // Check for game over
     checkGameOver();
   }
@@ -492,6 +547,9 @@
   function setupDragAndDrop() {
     function onPointerDown(e) {
       if (game.game_over()) return;
+
+      // In online match: player cannot drag pieces if it's not their turn
+      if (isOnlineMatch && game.turn() !== onlineMyColor) return;
 
       // If viewing history, jump to live move
       if (!isViewingLive()) {
@@ -507,6 +565,7 @@
       const squareId = targetSquareEl.dataset.square;
       const piece = game.get(squareId);
       if (!piece || piece.color !== game.turn()) return;
+      if (isOnlineMatch && piece.color !== onlineMyColor) return;
 
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -803,8 +862,18 @@
 
   // --- Player Customization: Names & Avatars ---
   function renderPlayerProfiles() {
-    document.getElementById('name-top').textContent = playerProfiles.b.name;
-    document.getElementById('name-bottom').textContent = playerProfiles.w.name;
+    if (isOnlineMatch) {
+      if (onlineMyColor === 'b') {
+        document.getElementById('name-top').textContent = 'Opponent (White)';
+        document.getElementById('name-bottom').textContent = `${playerProfiles.b.name || 'You'} (Black)`;
+      } else {
+        document.getElementById('name-top').textContent = 'Opponent (Black)';
+        document.getElementById('name-bottom').textContent = `${playerProfiles.w.name || 'You'} (White)`;
+      }
+    } else {
+      document.getElementById('name-top').textContent = playerProfiles.b.name;
+      document.getElementById('name-bottom').textContent = playerProfiles.w.name;
+    }
 
     const isDark = currentTheme === 'dark';
     const topColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
@@ -1425,12 +1494,83 @@
     // Game over actions
     btnPlayAgain.addEventListener('click', () => {
       gameOverModal.style.display = 'none';
-      startNewGame();
+      if (isOnlineMatch && typeof chessMultiplayer !== 'undefined') {
+        chessMultiplayer.requestRematch();
+        showToast('Rematch request sent to opponent...');
+      } else {
+        startNewGame();
+      }
     });
 
     btnDismissModal.addEventListener('click', () => {
       gameOverModal.style.display = 'none';
     });
+
+    // Multiplayer triggers
+    if (btnMultiplayer) {
+      btnMultiplayer.addEventListener('click', openMultiplayerModal);
+    }
+    if (btnMpStatus) {
+      btnMpStatus.addEventListener('click', openMultiplayerModal);
+    }
+    if (btnMpCreate) {
+      btnMpCreate.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+
+        const roomId = chessMultiplayer.createRoom(onlineSelectedColorChoice);
+        onlineRoomId = roomId;
+        isOnlineMatch = true;
+        onlineMyColor = chessMultiplayer.myColor;
+        document.body.classList.add('in-online-match');
+
+        const shareUrl = chessMultiplayer.getShareableLink();
+        copyToClipboard(shareUrl);
+        window.history.replaceState({}, '', shareUrl);
+
+        applyBoardOrientation();
+        renderPlayerProfiles();
+
+        closeMultiplayerModal();
+        showToast('Link copied to clipboard! Share it with your opponent.');
+      });
+    }
+    if (btnMpCancel) {
+      btnMpCancel.addEventListener('click', closeMultiplayerModal);
+    }
+    if (btnMpClose) {
+      btnMpClose.addEventListener('click', closeMultiplayerModal);
+    }
+    if (btnMpCopyLink) {
+      btnMpCopyLink.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+        const shareUrl = chessMultiplayer.getShareableLink();
+        copyToClipboard(shareUrl);
+        showToast('Link copied to clipboard!');
+      });
+    }
+    if (btnMpLeave) {
+      btnMpLeave.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+        if (confirm('Leave online match and return to local pass-and-play?')) {
+          leaveOnlineMatch();
+        }
+      });
+    }
+    if (mpColorChoices) {
+      mpColorChoices.querySelectorAll('.mp-color-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+          mpColorChoices.querySelectorAll('.mp-color-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          onlineSelectedColorChoice = pill.dataset.color;
+        });
+      });
+    }
+    if (multiplayerModal) {
+      multiplayerModal.addEventListener('click', e => {
+        if (e.target === multiplayerModal) closeMultiplayerModal();
+      });
+    }
 
     // Name editing triggers
     document.getElementById('name-top').addEventListener('click', () => openNameEditor('b'));
@@ -1455,7 +1595,211 @@
     });
   }
 
-  function startNewGame() {
+  // --- Multiplayer Integration Logic ---
+  function setupMultiplayer() {
+    if (typeof chessMultiplayer === 'undefined') return;
+
+    // Status change listener (disconnected, waiting, connected)
+    chessMultiplayer.onStatusChange = (status) => {
+      isOnlinePeerConnected = (status === 'connected');
+
+      if (btnMpStatus) {
+        if (status === 'connected') {
+          // Connected state: Turn GREEN! (Image 2)
+          btnMpStatus.className = 'icon-btn circle-btn mp-status-btn connected';
+          btnMpStatus.title = 'Multiplayer: Opponent Connected (Active match)';
+          if (mpModalStatusDot) mpModalStatusDot.className = 'mp-status-dot active';
+          if (mpRoomStatusText) mpRoomStatusText.textContent = 'Opponent connected!';
+        } else if (status === 'waiting') {
+          // Waiting state: Amber pulse
+          btnMpStatus.className = 'icon-btn circle-btn mp-status-btn waiting';
+          btnMpStatus.title = 'Multiplayer: Waiting for opponent to join...';
+          if (mpModalStatusDot) mpModalStatusDot.className = 'mp-status-dot waiting';
+          if (mpRoomStatusText) mpRoomStatusText.textContent = 'Waiting for friend to join...';
+        } else {
+          // Inactive / local play: Neutral gray
+          btnMpStatus.className = 'icon-btn circle-btn mp-status-btn';
+          btnMpStatus.title = 'Multiplayer: Local play';
+          if (mpModalStatusDot) mpModalStatusDot.className = 'mp-status-dot';
+          if (mpRoomStatusText) mpRoomStatusText.textContent = 'Local game';
+        }
+      }
+    };
+
+    // When opponent joins room
+    chessMultiplayer.onPeerJoin = () => {
+      chessAudio.playCheck();
+      if (typeof chessHaptics !== 'undefined') chessHaptics.capture();
+
+      if (chessMultiplayer.isHost) {
+        showToast('Opponent joined! Game started.');
+        // Host synchronizes authoritative game state to guest
+        chessMultiplayer.sendSyncState({
+          fen: game.fen(),
+          moves: historyMoves,
+          turn: game.turn(),
+          timeSettings: playerTimeSettings,
+          timeLeft: playerTimeLeft,
+          historyMoves: historyMoves
+        });
+      } else {
+        onlineMyColor = chessMultiplayer.myColor;
+        applyBoardOrientation();
+        renderPlayerProfiles();
+        showToast(`Connected! You play as ${onlineMyColor === 'w' ? 'White' : 'Black'}.`);
+      }
+    };
+
+    // When opponent leaves / disconnects
+    chessMultiplayer.onPeerLeave = () => {
+      showToast('Opponent disconnected. Waiting for them to rejoin...');
+    };
+
+    // Move received from opponent
+    chessMultiplayer.onMoveReceived = (data) => {
+      if (data && data.move) {
+        if (data.clocks) {
+          playerTimeLeft = data.clocks;
+          updateClockDisplays();
+        }
+        executeMove(data.move, true);
+      }
+    };
+
+    // Full state synchronization
+    chessMultiplayer.onSyncReceived = (data) => {
+      if (!chessMultiplayer.isHost) {
+        if (chessMultiplayer.myColor) {
+          onlineMyColor = chessMultiplayer.myColor;
+        }
+        applyBoardOrientation();
+
+        if (data.timeSettings) {
+          playerTimeSettings = data.timeSettings;
+        }
+        if (data.timeLeft) {
+          playerTimeLeft = data.timeLeft;
+        }
+        if (data.fen && data.fen !== game.fen()) {
+          game = new Chess(data.fen);
+          historyFens = [game.fen()];
+          if (data.historyMoves) {
+            historyMoves = data.historyMoves;
+          }
+          currentViewIndex = historyFens.length - 1;
+        }
+
+        renderBoard(game);
+        renderPlayerProfiles();
+        updateStatus();
+        updateClockDisplays();
+        if (historyMoves.length >= 1 && !game.game_over()) {
+          startClock();
+        }
+      }
+    };
+
+    // Rematch triggers
+    chessMultiplayer.onRematchRequested = () => {
+      showToast('Opponent requested a rematch. Tap Play Again to accept.');
+    };
+
+    chessMultiplayer.onRematchAccepted = (data) => {
+      showToast('Rematch accepted! Starting new game...');
+      if (!chessMultiplayer.isHost && data.guestColor) {
+        onlineMyColor = data.guestColor;
+      }
+      startNewGame(false);
+      applyBoardOrientation();
+      renderPlayerProfiles();
+    };
+  }
+
+  function checkUrlForGame() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const gameParam = urlParams.get('game');
+      if (gameParam) {
+        joinOnlineMatch(gameParam);
+      }
+    } catch (e) {}
+  }
+
+  function joinOnlineMatch(roomId) {
+    isOnlineMatch = true;
+    onlineRoomId = roomId;
+    document.body.classList.add('in-online-match');
+
+    if (btnMpStatus) {
+      btnMpStatus.className = 'icon-btn circle-btn mp-status-btn waiting';
+      btnMpStatus.title = 'Multiplayer: Connecting to room...';
+    }
+    showToast(`Joining room ${roomId}...`);
+
+    chessMultiplayer.joinRoom(roomId);
+  }
+
+  function openMultiplayerModal() {
+    if (!isOnlineMatch) {
+      if (mpCreateSection) mpCreateSection.style.display = 'block';
+      if (mpActiveSection) mpActiveSection.style.display = 'none';
+      if (mpModalTitle) mpModalTitle.textContent = 'Play with a Friend';
+      if (mpModalSubtitle) mpModalSubtitle.textContent = 'Share a link to play together on two devices';
+    } else {
+      if (mpCreateSection) mpCreateSection.style.display = 'none';
+      if (mpActiveSection) mpActiveSection.style.display = 'block';
+      if (mpModalTitle) mpModalTitle.textContent = 'Active Match';
+      if (mpModalSubtitle) mpModalSubtitle.textContent = `Room Code: ${onlineRoomId}`;
+      if (mpLinkInput) mpLinkInput.value = chessMultiplayer.getShareableLink();
+      if (mpMySide) {
+        mpMySide.innerHTML = `Playing as: <strong>${onlineMyColor === 'w' ? 'White' : 'Black'}</strong>`;
+      }
+    }
+    if (multiplayerModal) multiplayerModal.style.display = 'flex';
+    if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+  }
+
+  function closeMultiplayerModal() {
+    if (multiplayerModal) multiplayerModal.style.display = 'none';
+    if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+  }
+
+  function leaveOnlineMatch() {
+    chessMultiplayer.disconnect(true);
+    isOnlineMatch = false;
+    onlineMyColor = 'w';
+    onlineRoomId = null;
+    document.body.classList.remove('in-online-match');
+    window.history.replaceState({}, '', window.location.pathname);
+    closeMultiplayerModal();
+    startNewGame(false);
+    showToast('Returned to local pass-and-play.');
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+      document.execCommand('copy');
+    } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  function startNewGame(playSound = true) {
     game = new Chess();
     historyFens = [game.fen()];
     historyMoves = [];
@@ -1464,11 +1808,17 @@
     legalMovesForSelected = [];
     manualBoardFlipped = false;
     resetClocks();
+    applyBoardOrientation();
     renderBoard(game);
     updateStatus();
     updateHistoryNavButtons();
-    chessAudio.playMove();
+    if (playSound) chessAudio.playMove();
   }
+
+  // Expose helpers for testing & debug
+  window.joinOnlineMatch = joinOnlineMatch;
+  window.leaveOnlineMatch = leaveOnlineMatch;
+  window.openMultiplayerModal = openMultiplayerModal;
 
   // Launch!
   init();
