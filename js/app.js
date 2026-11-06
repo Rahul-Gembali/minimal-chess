@@ -110,13 +110,41 @@
   let isReviewModeActive = false;
 
   const CLASSIFICATION_META = {
-    brilliant: { icon: '💎', label: 'Brilliant', class: 'badge-brilliant' },
-    best: { icon: '🎯', label: 'Best', class: 'badge-best' },
-    good: { icon: '👍', label: 'Good', class: 'badge-good' },
-    book: { icon: '📖', label: 'Book', class: 'badge-book' },
-    inaccuracy: { icon: '❓', label: 'Inaccuracy', class: 'badge-inaccuracy' },
-    mistake: { icon: '❓❓', label: 'Mistake', class: 'badge-mistake' },
-    blunder: { icon: '❌', label: 'Blunder', class: 'badge-blunder' }
+    brilliant: {
+      svg: '<svg class="eval-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 18 3 22 9 12 22 2 9 6 3"></polygon><line x1="2" y1="9" x2="22" y2="9"></line><polyline points="10 3 12 9 14 3"></polyline><polyline points="6 9 12 22 18 9"></polyline></svg>',
+      label: 'Brilliant',
+      class: 'badge-brilliant'
+    },
+    best: {
+      svg: '<svg class="eval-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>',
+      label: 'Best',
+      class: 'badge-best'
+    },
+    good: {
+      svg: '<svg class="eval-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+      label: 'Good',
+      class: 'badge-good'
+    },
+    book: {
+      svg: '<svg class="eval-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
+      label: 'Book',
+      class: 'badge-book'
+    },
+    inaccuracy: {
+      svg: '<svg class="eval-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
+      label: 'Inaccuracy',
+      class: 'badge-inaccuracy'
+    },
+    mistake: {
+      svg: '<svg class="eval-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="9" y2="13"></line><line x1="9" y1="17" x2="9.01" y2="17"></line><line x1="15" y1="6" x2="15" y2="13"></line><line x1="15" y1="17" x2="15.01" y2="17"></line></svg>',
+      label: 'Mistake',
+      class: 'badge-mistake'
+    },
+    blunder: {
+      svg: '<svg class="eval-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+      label: 'Blunder',
+      class: 'badge-blunder'
+    }
   };
 
   // Name modal
@@ -880,13 +908,13 @@
         const revW = currentReviewData.moveReviews[i];
         if (revW && CLASSIFICATION_META[revW.classification]) {
           const metaW = CLASSIFICATION_META[revW.classification];
-          whiteBadgeHtml = `<span class="move-eval-badge ${metaW.class}" title="${metaW.label}">${metaW.icon}</span>`;
+          whiteBadgeHtml = `<span class="move-eval-badge ${metaW.class}" title="${metaW.label}">${metaW.svg}</span>`;
         }
         if (history[i + 1]) {
           const revB = currentReviewData.moveReviews[i + 1];
           if (revB && CLASSIFICATION_META[revB.classification]) {
             const metaB = CLASSIFICATION_META[revB.classification];
-            blackBadgeHtml = `<span class="move-eval-badge ${metaB.class}" title="${metaB.label}">${metaB.icon}</span>`;
+            blackBadgeHtml = `<span class="move-eval-badge ${metaB.class}" title="${metaB.label}">${metaB.svg}</span>`;
           }
         }
       }
@@ -1394,7 +1422,7 @@
     }
 
     const meta = CLASSIFICATION_META[review.classification] || CLASSIFICATION_META.good;
-    if (bannerBadgeIcon) bannerBadgeIcon.textContent = meta.icon;
+    if (bannerBadgeIcon) bannerBadgeIcon.innerHTML = meta.svg;
     if (bannerBadgeLabel) bannerBadgeLabel.textContent = meta.label;
     if (reviewBannerBadge) {
       reviewBannerBadge.className = 'review-banner-badge ' + meta.class;
@@ -1931,19 +1959,19 @@
       if (btnMpStatus) {
         if (status === 'connected') {
           // Connected state: Turn GREEN! (Image 2)
-          btnMpStatus.className = 'icon-btn circle-btn mp-status-btn connected';
+          btnMpStatus.className = 'icon-btn mp-status-btn connected';
           btnMpStatus.title = 'Multiplayer: Opponent Connected (Active match)';
           if (mpModalStatusDot) mpModalStatusDot.className = 'mp-status-dot active';
           if (mpRoomStatusText) mpRoomStatusText.textContent = 'Opponent connected!';
         } else if (status === 'waiting') {
           // Waiting state: Amber pulse
-          btnMpStatus.className = 'icon-btn circle-btn mp-status-btn waiting';
+          btnMpStatus.className = 'icon-btn mp-status-btn waiting';
           btnMpStatus.title = 'Multiplayer: Waiting for opponent to join...';
           if (mpModalStatusDot) mpModalStatusDot.className = 'mp-status-dot waiting';
           if (mpRoomStatusText) mpRoomStatusText.textContent = 'Waiting for friend to join...';
         } else {
           // Inactive / local play: Neutral gray
-          btnMpStatus.className = 'icon-btn circle-btn mp-status-btn';
+          btnMpStatus.className = 'icon-btn mp-status-btn';
           btnMpStatus.title = 'Multiplayer: Local play';
           if (mpModalStatusDot) mpModalStatusDot.className = 'mp-status-dot';
           if (mpRoomStatusText) mpRoomStatusText.textContent = 'Local game';
@@ -2060,7 +2088,7 @@
     document.body.classList.add('in-online-match');
 
     if (btnMpStatus) {
-      btnMpStatus.className = 'icon-btn circle-btn mp-status-btn waiting';
+      btnMpStatus.className = 'icon-btn mp-status-btn waiting';
       btnMpStatus.title = 'Multiplayer: Connecting to room...';
     }
     showToast(`Joining room ${roomId}...`);

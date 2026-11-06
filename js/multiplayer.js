@@ -197,7 +197,13 @@
 
           case 'guest_join':
             if (this.isHost) {
-              // Host welcomes guest with current state
+              // Immediately respond with host_present so guest receives assigned side & timer
+              this.sendPacket({
+                type: 'host_present',
+                color: this.myColor,
+                guestColor: this.assignedGuestColor,
+                timeSettings: this.timeSettings
+              });
               if (this.onPeerJoin) this.onPeerJoin(payload);
             }
             break;
