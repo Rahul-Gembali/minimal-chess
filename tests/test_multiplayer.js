@@ -17,22 +17,30 @@ require('../js/multiplayer.js');
 
 console.log('--- Running Multiplayer & P2P Synchronization Tests ---');
 
-// 1. Test Room Creation & Colors
+// 1. Test Room Creation & Colors & Custom Timer
 {
   const mp = new ChessMultiplayer();
-  const roomId = mp.createRoom('w');
+  const roomId = mp.createRoom('w', { w: 600, b: 600 });
   assert.strictEqual(typeof roomId, 'string');
   assert.strictEqual(roomId.length, 6);
   assert.strictEqual(mp.myColor, 'w');
   assert.strictEqual(mp.assignedGuestColor, 'b');
   assert.strictEqual(mp.isHost, true);
+  assert.deepStrictEqual(mp.timeSettings, { w: 600, b: 600 });
   mp.disconnect();
-  console.log('✓ Room creation & Host White assignment verified');
+  console.log('✓ Room creation, Host White assignment & Custom 10m timer verified');
+
+  const mpCustom = new ChessMultiplayer();
+  mpCustom.createRoom('random', { w: 300, b: 300 });
+  assert.deepStrictEqual(mpCustom.timeSettings, { w: 300, b: 300 });
+  mpCustom.disconnect();
+  console.log('✓ Room creation & Custom 5m stepper timer verified');
 
   const mpBlack = new ChessMultiplayer();
   mpBlack.createRoom('b');
   assert.strictEqual(mpBlack.myColor, 'b');
   assert.strictEqual(mpBlack.assignedGuestColor, 'w');
+  assert.deepStrictEqual(mpBlack.timeSettings, { w: 'infinite', b: 'infinite' });
   mpBlack.disconnect();
   console.log('✓ Room creation & Host Black assignment verified');
 
@@ -54,9 +62,11 @@ async function testTwoPlayerSync() {
   host.isHost = true;
   host.myColor = 'w';
   host.assignedGuestColor = 'b';
+  host.timeSettings = { w: 180, b: 180 };
 
   let hostConnected = false;
   let guestConnected = false;
+  let guestReceivedTimeSettings = null;
   let moveReceivedByGuest = null;
   let moveReceivedByHost = null;
 
@@ -74,6 +84,11 @@ async function testTwoPlayerSync() {
           host.sendMove({ from: 'e2', to: 'e4' }, 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1', { w: 180, b: 180 });
         }, 300);
       }
+    };
+
+    guest.onPeerJoin = (data) => {
+      guestReceivedTimeSettings = data.timeSettings;
+      console.log('✓ Guest received synchronized time settings from Host:', data.timeSettings);
     };
 
     guest.onStatusChange = (status) => {
@@ -114,6 +129,7 @@ async function testTwoPlayerSync() {
 
   assert.strictEqual(hostConnected, true, 'Host should be connected to peer');
   assert.strictEqual(guestConnected, true, 'Guest should be connected to peer');
+  assert.deepStrictEqual(guestReceivedTimeSettings, { w: 180, b: 180 }, 'Guest must receive host synchronized time control');
   console.log('✓ Bidirectional move exchange and real-time synchronization verified!');
 }
 

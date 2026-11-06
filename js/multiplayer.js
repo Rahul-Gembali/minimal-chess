@@ -20,6 +20,7 @@
       this.opponentPlayerId = null;
       this.myColor = null; // 'w' or 'b'
       this.assignedGuestColor = null;
+      this.timeSettings = null;
 
       this.client = null;
       this.brokerIndex = 0;
@@ -48,7 +49,7 @@
     /**
      * Create a new room as host
      */
-    createRoom(preferredColor = 'random') {
+    createRoom(preferredColor = 'random', timeSettings = null) {
       const chars = '23456789abcdefghjkmnpqrstuvwxyz';
       let code = '';
       for (let i = 0; i < 6; i++) {
@@ -56,6 +57,7 @@
       }
       this.roomId = code;
       this.isHost = true;
+      this.timeSettings = timeSettings || { w: 'infinite', b: 'infinite' };
 
       // Determine colors
       if (preferredColor === 'w') {
@@ -157,7 +159,8 @@
             this.sendPacket({
               type: 'host_present',
               color: this.myColor,
-              guestColor: this.assignedGuestColor
+              guestColor: this.assignedGuestColor,
+              timeSettings: this.timeSettings
             });
           } else {
             this.sendPacket({
@@ -202,6 +205,9 @@
           case 'host_present':
             if (!this.isHost && payload.guestColor) {
               this.myColor = payload.guestColor;
+              if (payload.timeSettings) {
+                this.timeSettings = payload.timeSettings;
+              }
               if (this.onPeerJoin) this.onPeerJoin(payload);
             }
             break;
@@ -370,6 +376,7 @@
         this.isHost = false;
         this.myColor = null;
         this.assignedGuestColor = null;
+        this.timeSettings = null;
         this.updateStatus();
       }
     }

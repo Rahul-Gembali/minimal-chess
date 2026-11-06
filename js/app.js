@@ -120,6 +120,16 @@
   const mpRoomStatusText = document.getElementById('mp-room-status-text');
   const mpModalStatusDot = document.getElementById('mp-modal-status-dot');
   const mpMySide = document.getElementById('mp-my-side');
+  const mpActiveTimer = document.getElementById('mp-active-timer');
+  const mpTimerPresets = document.getElementById('mp-timer-presets');
+  const mpTimerCustomRow = document.getElementById('mp-timer-custom-row');
+  const mpStepperDec = document.getElementById('mp-stepper-dec');
+  const mpStepperInc = document.getElementById('mp-stepper-inc');
+  const mpStepperVal = document.getElementById('mp-stepper-val');
+
+  let mpSelectedTime = 'infinite';
+  let mpIsCustom = false;
+  let mpCustomMins = 5;
 
   // Game Timers State & Elements
   let playerTimeSettings = { w: 'infinite', b: 'infinite' };
@@ -1558,7 +1568,14 @@
       btnMpCreate.addEventListener('click', () => {
         if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
 
-        const roomId = chessMultiplayer.createRoom(onlineSelectedColorChoice);
+        // Apply synchronized time control to both players ("same for both")
+        const chosenTime = mpIsCustom ? (mpCustomMins * 60) : mpSelectedTime;
+        playerTimeSettings = { w: chosenTime, b: chosenTime };
+        playerIsCustom = { w: mpIsCustom, b: mpIsCustom };
+        modalStepperMins = { w: mpCustomMins, b: mpCustomMins };
+        resetClocks();
+
+        const roomId = chessMultiplayer.createRoom(onlineSelectedColorChoice, playerTimeSettings);
         onlineRoomId = roomId;
         isOnlineMatch = true;
         onlineMyColor = chessMultiplayer.myColor;
@@ -1573,6 +1590,46 @@
 
         closeMultiplayerModal();
         showToast('Link copied to clipboard! Share it with your opponent.');
+      });
+    }
+    if (mpTimerPresets) {
+      mpTimerPresets.addEventListener('click', (e) => {
+        const pill = e.target.closest('.preset-pill');
+        if (!pill) return;
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+
+        const timeVal = pill.dataset.time;
+        if (timeVal === 'custom') {
+          mpIsCustom = true;
+          mpSelectedTime = mpCustomMins * 60;
+        } else if (timeVal === 'infinite') {
+          mpIsCustom = false;
+          mpSelectedTime = 'infinite';
+        } else {
+          mpIsCustom = false;
+          mpSelectedTime = Number(timeVal);
+        }
+        syncMpModalTimerUi();
+      });
+    }
+    if (mpStepperDec) {
+      mpStepperDec.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+        if (mpCustomMins > 1) {
+          mpCustomMins--;
+          mpSelectedTime = mpCustomMins * 60;
+          if (mpStepperVal) mpStepperVal.textContent = String(mpCustomMins);
+        }
+      });
+    }
+    if (mpStepperInc) {
+      mpStepperInc.addEventListener('click', () => {
+        if (typeof chessHaptics !== 'undefined') chessHaptics.tap();
+        if (mpCustomMins < 60) {
+          mpCustomMins++;
+          mpSelectedTime = mpCustomMins * 60;
+          if (mpStepperVal) mpStepperVal.textContent = String(mpCustomMins);
+        }
       });
     }
     if (btnMpCancel) {
@@ -1685,6 +1742,10 @@
         });
       } else {
         onlineMyColor = chessMultiplayer.myColor;
+        if (data && data.timeSettings) {
+          playerTimeSettings = data.timeSettings;
+          resetClocks();
+        }
         applyBoardOrientation();
         renderPlayerProfiles();
         showToast(`Connected! You play as ${onlineMyColor === 'w' ? 'White' : 'Black'}.`);
@@ -1780,12 +1841,33 @@
     chessMultiplayer.joinRoom(roomId);
   }
 
+  function syncMpModalTimerUi() {
+    if (!mpTimerPresets) return;
+    const pills = mpTimerPresets.querySelectorAll('.preset-pill');
+    pills.forEach(pill => {
+      const dataTime = pill.dataset.time;
+      if (mpIsCustom) {
+        pill.classList.toggle('active', dataTime === 'custom');
+      } else {
+        pill.classList.toggle('active', dataTime === String(mpSelectedTime));
+      }
+    });
+
+    if (mpTimerCustomRow) {
+      mpTimerCustomRow.style.display = mpIsCustom ? 'flex' : 'none';
+    }
+    if (mpStepperVal) {
+      mpStepperVal.textContent = String(mpCustomMins);
+    }
+  }
+
   function openMultiplayerModal() {
     if (!isOnlineMatch) {
       if (mpCreateSection) mpCreateSection.style.display = 'block';
       if (mpActiveSection) mpActiveSection.style.display = 'none';
       if (mpModalTitle) mpModalTitle.textContent = 'Play with a Friend';
       if (mpModalSubtitle) mpModalSubtitle.textContent = 'Share a link to play together on two devices';
+      syncMpModalTimerUi();
     } else {
       if (mpCreateSection) mpCreateSection.style.display = 'none';
       if (mpActiveSection) mpActiveSection.style.display = 'block';
@@ -1794,6 +1876,13 @@
       if (mpLinkInput) mpLinkInput.value = chessMultiplayer.getShareableLink();
       if (mpMySide) {
         mpMySide.innerHTML = `Playing as: <strong>${onlineMyColor === 'w' ? 'White' : 'Black'}</strong>`;
+      }
+      if (mpActiveTimer) {
+        let label = '∞';
+        if (playerTimeSettings.w !== 'infinite') {
+          label = `${Math.round(Number(playerTimeSettings.w) / 60)} min`;
+        }
+        mpActiveTimer.innerHTML = `Timer: <strong>${label}</strong>`;
       }
     }
     if (multiplayerModal) multiplayerModal.style.display = 'flex';

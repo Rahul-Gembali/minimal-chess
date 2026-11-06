@@ -374,6 +374,23 @@
           </button>
         </div>
 
+        <div class="mp-option-label" style="margin-top: 16px;">Time control (same for both):</div>
+        <div class="timer-presets mp-timer-presets" id="mp-timer-presets">
+          <button type="button" class="preset-pill" data-time="60">1m</button>
+          <button type="button" class="preset-pill" data-time="180">3m</button>
+          <button type="button" class="preset-pill" data-time="600">10m</button>
+          <button type="button" class="preset-pill active" data-time="infinite"><span class="infinity-symbol">∞</span></button>
+          <button type="button" class="preset-pill" data-time="custom">Custom</button>
+        </div>
+        <div class="timer-custom-row" id="mp-timer-custom-row" style="display: none;">
+          <span class="timer-custom-label">Minutes:</span>
+          <div class="timer-stepper">
+            <button type="button" class="stepper-btn" id="mp-stepper-dec" aria-label="Decrease minutes">−</button>
+            <span class="stepper-val" id="mp-stepper-val">5</span>
+            <button type="button" class="stepper-btn" id="mp-stepper-inc" aria-label="Increase minutes">+</button>
+          </div>
+        </div>
+
         <div class="modal-actions" style="margin-top: 20px;">
           <button type="button" id="btn-mp-create" class="btn-primary">Create & Copy Link</button>
           <button type="button" id="btn-mp-cancel" class="btn-secondary">Cancel</button>
@@ -392,6 +409,7 @@
             <button type="button" id="btn-mp-copy-link" class="btn-primary" style="padding: 8px 14px; font-size: 13px;">Copy</button>
           </div>
           <div class="mp-my-side" id="mp-my-side">Playing as: <strong>White</strong></div>
+          <div class="mp-my-side" id="mp-active-timer" style="margin-top: 3px;">Timer: <strong>∞</strong></div>
         </div>
 
         <div class="modal-actions" style="margin-top: 18px;">
