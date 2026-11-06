@@ -716,12 +716,22 @@
     const topCard = document.getElementById('player-top');
     const bottomCard = document.getElementById('player-bottom');
 
-    if (currentTurn === 'w') {
-      bottomCard.classList.add('active-turn');
-      topCard.classList.remove('active-turn');
+    if (isOnlineMatch) {
+      if (currentTurn === onlineMyColor) {
+        bottomCard.classList.add('active-turn');
+        topCard.classList.remove('active-turn');
+      } else {
+        topCard.classList.add('active-turn');
+        bottomCard.classList.remove('active-turn');
+      }
     } else {
-      topCard.classList.add('active-turn');
-      bottomCard.classList.remove('active-turn');
+      if (currentTurn === 'w') {
+        bottomCard.classList.add('active-turn');
+        topCard.classList.remove('active-turn');
+      } else {
+        topCard.classList.add('active-turn');
+        bottomCard.classList.remove('active-turn');
+      }
     }
 
     // Calculate captured pieces
@@ -743,26 +753,45 @@
       }
     });
 
-    // Render trays
-    renderCapturedList('captured-bottom', capturedByWhite);
-    renderCapturedList('captured-top', capturedByBlack);
-
-    // Render material advantage badges (+1, +3, +9)
     const advBottom = document.getElementById('advantage-bottom');
     const advTop = document.getElementById('advantage-top');
 
-    const diff = whiteScore - blackScore;
-    if (diff > 0) {
-      advBottom.textContent = `+${diff}`;
-      advBottom.classList.add('visible');
-      advTop.classList.remove('visible');
-    } else if (diff < 0) {
-      advTop.textContent = `+${Math.abs(diff)}`;
-      advTop.classList.add('visible');
-      advBottom.classList.remove('visible');
+    if (isOnlineMatch && onlineMyColor === 'b') {
+      // Perspective locked to Black at bottom:
+      renderCapturedList('captured-bottom', capturedByBlack);
+      renderCapturedList('captured-top', capturedByWhite);
+
+      const diff = blackScore - whiteScore;
+      if (diff > 0) {
+        advBottom.textContent = `+${diff}`;
+        advBottom.classList.add('visible');
+        advTop.classList.remove('visible');
+      } else if (diff < 0) {
+        advTop.textContent = `+${Math.abs(diff)}`;
+        advTop.classList.add('visible');
+        advBottom.classList.remove('visible');
+      } else {
+        advBottom.classList.remove('visible');
+        advTop.classList.remove('visible');
+      }
     } else {
-      advBottom.classList.remove('visible');
-      advTop.classList.remove('visible');
+      // Standard / White at bottom:
+      renderCapturedList('captured-bottom', capturedByWhite);
+      renderCapturedList('captured-top', capturedByBlack);
+
+      const diff = whiteScore - blackScore;
+      if (diff > 0) {
+        advBottom.textContent = `+${diff}`;
+        advBottom.classList.add('visible');
+        advTop.classList.remove('visible');
+      } else if (diff < 0) {
+        advTop.textContent = `+${Math.abs(diff)}`;
+        advTop.classList.add('visible');
+        advBottom.classList.remove('visible');
+      } else {
+        advBottom.classList.remove('visible');
+        advTop.classList.remove('visible');
+      }
     }
 
     updateHistoryList(moveHistory);
@@ -862,28 +891,37 @@
 
   // --- Player Customization: Names & Avatars ---
   function renderPlayerProfiles() {
+    const isDark = currentTheme === 'dark';
+    const avatarTop = document.getElementById('avatar-top');
+    const avatarBottom = document.getElementById('avatar-bottom');
+
     if (isOnlineMatch) {
+      const whitePieceColor = isDark ? '#c9c8c8' : PIECE_COLORS.w;
+      const blackPieceColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
+
       if (onlineMyColor === 'b') {
         document.getElementById('name-top').textContent = 'Opponent (White)';
         document.getElementById('name-bottom').textContent = `${playerProfiles.b.name || 'You'} (Black)`;
+
+        avatarTop.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
+        avatarBottom.innerHTML = getPieceSvg(playerProfiles.b.avatar, blackPieceColor, 26);
       } else {
         document.getElementById('name-top').textContent = 'Opponent (Black)';
         document.getElementById('name-bottom').textContent = `${playerProfiles.w.name || 'You'} (White)`;
+
+        avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, blackPieceColor, 26);
+        avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
       }
     } else {
       document.getElementById('name-top').textContent = playerProfiles.b.name;
       document.getElementById('name-bottom').textContent = playerProfiles.w.name;
+
+      const topColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
+      const bottomColor = isDark ? '#c9c8c8' : PIECE_COLORS.w;
+
+      avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, topColor, 26);
+      avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, bottomColor, 26);
     }
-
-    const isDark = currentTheme === 'dark';
-    const topColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
-    const bottomColor = isDark ? '#c9c8c8' : PIECE_COLORS.w;
-
-    const avatarTop = document.getElementById('avatar-top');
-    avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, topColor, 26);
-
-    const avatarBottom = document.getElementById('avatar-bottom');
-    avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, bottomColor, 26);
   }
 
   function openNameEditor(playerKey) {
@@ -1038,13 +1076,16 @@
   }
 
   function updateClockDisplays() {
-    if (clockBottom) clockBottom.innerHTML = formatClockDisplay(playerTimeLeft.w);
-    if (clockTop) clockTop.innerHTML = formatClockDisplay(playerTimeLeft.b);
+    const myTime = (isOnlineMatch && onlineMyColor === 'b') ? playerTimeLeft.b : playerTimeLeft.w;
+    const oppTime = (isOnlineMatch && onlineMyColor === 'b') ? playerTimeLeft.w : playerTimeLeft.b;
+
+    if (clockBottom) clockBottom.innerHTML = formatClockDisplay(myTime);
+    if (clockTop) clockTop.innerHTML = formatClockDisplay(oppTime);
     if (timerPillLabel) timerPillLabel.innerHTML = getTimerSummaryLabel();
 
     // Critical low-time warning (last 10 seconds, non-infinite): red color styling
     if (clockBottom) {
-      if (playerTimeLeft.w !== Infinity && playerTimeLeft.w <= 10 && playerTimeLeft.w > 0) {
+      if (myTime !== Infinity && myTime <= 10 && myTime > 0) {
         clockBottom.classList.add('critical-time');
         clockBottom.classList.add('low-time');
       } else {
@@ -1053,7 +1094,7 @@
       }
     }
     if (clockTop) {
-      if (playerTimeLeft.b !== Infinity && playerTimeLeft.b <= 10 && playerTimeLeft.b > 0) {
+      if (oppTime !== Infinity && oppTime <= 10 && oppTime > 0) {
         clockTop.classList.add('critical-time');
         clockTop.classList.add('low-time');
       } else {
