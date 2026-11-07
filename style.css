@@ -849,31 +849,34 @@ body {
 
 /* --------------------------------------------------------------------------
    Internal In-Place Flip for Top Player (Pass-and-Play Turn Orientation)
-   Zero whole-card swing: each element flips inside its own boundary!
+   Smooth whole-card rotation for Tabletop mode; normal upright in mobile
    -------------------------------------------------------------------------- */
 #player-top.facing-opponent {
-  transform: none !important;
-}
-
-/* 1. Piece silhouette inside circular avatar rotates 180° in place */
-.player-avatar svg,
-.player-avatar img {
+  transform: rotate(180deg) !important;
   transform-origin: center center;
   transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
 
-#player-top.facing-opponent .player-avatar svg,
-#player-top.facing-opponent .player-avatar img {
-  transform: rotate(180deg);
+/* 1. Piece silhouette inside circular avatar */
+.player-avatar svg,
+.player-avatar img {
+  transform-origin: center center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  will-change: transform;
 }
 
-/* 2. Player Name & Edit Icon: Clean in-place 180° rotation for opposite player */
-#player-top.facing-opponent .player-name-wrapper {
-  transform: rotate(180deg);
+/* 2. Player Name & Edit Icon */
+.player-name-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transform-origin: center center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  will-change: transform;
 }
 
-/* 3. Captured Tray mini-icons & Advantage score rotate in place */
+/* 3. Captured Tray mini-icons & Advantage score */
 .captured-item {
   width: 16px;
   height: 16px;
@@ -886,14 +889,9 @@ body {
   will-change: transform;
 }
 
-#player-top.facing-opponent .captured-item {
-  transform: rotate(180deg);
-}
-
-#player-top.facing-opponent .advantage-badge {
+.advantage-badge {
   transform-origin: center center;
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: rotate(180deg);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
 }
 
 /* Dragging active piece clone */

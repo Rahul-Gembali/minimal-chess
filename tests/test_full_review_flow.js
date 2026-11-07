@@ -137,8 +137,12 @@ async function run() {
       ];
 
       for (const m of moves) {
-        document.querySelector('[data-square="' + m.from + '"]').click();
-        document.querySelector('[data-square="' + m.to + '"]').click();
+        const fromEl = document.querySelector('[data-square="' + m.from + '"]');
+        if (!fromEl) throw new Error('Square not found: ' + m.from);
+        fromEl.click();
+        const toEl = document.querySelector('[data-square="' + m.to + '"]');
+        if (!toEl) throw new Error('Square not found: ' + m.to);
+        toEl.click();
       }
 
       return {
@@ -149,14 +153,10 @@ async function run() {
   `);
   console.log('Move execution:', moveResult);
 
-  // Check game over modal & trigger review via explicit Review Game button
+  // Check that checkmate automatically starts Game Review calculating state!
   await sleep(600);
-  const gameOverVisible = await evalJs(`document.getElementById('game-over-modal').style.display !== 'none'`);
-  console.log('✓ Game Over modal displayed without premature hijack:', gameOverVisible);
-
-  console.log('Clicking "Review Game" button from Game Over modal...');
-  await evalJs(`document.getElementById('btn-review-game-prompt').click()`);
-  await sleep(300);
+  const reviewModalVisible = await evalJs(`document.getElementById('review-modal').style.display !== 'none'`);
+  console.log('✓ Review modal automatically launched on checkmate:', reviewModalVisible);
 
   // Take screenshot of Calculating modal
   await takeShot('review_modal_step1_calculating.png');

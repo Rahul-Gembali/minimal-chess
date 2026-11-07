@@ -428,7 +428,11 @@
       chessboardEl.classList.remove('pieces-facing-black');
       chessboardEl.classList.remove('tabletop-mode');
       const topPlayerCard = document.getElementById('player-top');
+      const bottomPlayerCard = document.getElementById('player-bottom');
       if (topPlayerCard) topPlayerCard.classList.remove('facing-opponent');
+      if (bottomPlayerCard) bottomPlayerCard.classList.remove('facing-opponent');
+      renderPlayerProfiles();
+      updateClockDisplays();
       return;
     }
 
@@ -446,22 +450,30 @@
       boardContainerEl.classList.remove('flipped');
     }
 
-    // 2. Piece rotation for Black player (opposite player sitting across phone):
+    // 2. Piece & Tabletop orientation:
     const topPlayerCard = document.getElementById('player-top');
+    const bottomPlayerCard = document.getElementById('player-bottom');
+
     if (isTabletopMode) {
       chessboardEl.classList.add('tabletop-mode');
       chessboardEl.classList.remove('pieces-facing-black');
       if (topPlayerCard) topPlayerCard.classList.add('facing-opponent');
+      if (bottomPlayerCard) bottomPlayerCard.classList.remove('facing-opponent');
     } else {
       chessboardEl.classList.remove('tabletop-mode');
-      if (pieceFlipEnabled && activeTurn === 'b') {
+      // In mobile perspective, keep name boxes right-side up and legible
+      if (topPlayerCard) topPlayerCard.classList.remove('facing-opponent');
+      if (bottomPlayerCard) bottomPlayerCard.classList.remove('facing-opponent');
+
+      if (pieceFlipEnabled && activeTurn === 'b' && !shouldFlipBoard) {
         chessboardEl.classList.add('pieces-facing-black');
-        if (topPlayerCard) topPlayerCard.classList.add('facing-opponent');
       } else {
         chessboardEl.classList.remove('pieces-facing-black');
-        if (topPlayerCard) topPlayerCard.classList.remove('facing-opponent');
       }
     }
+
+    renderPlayerProfiles();
+    updateClockDisplays();
   }
 
   // --- Move History Stepping (Back / Forward) ---
@@ -793,22 +805,15 @@
     const topCard = document.getElementById('player-top');
     const bottomCard = document.getElementById('player-bottom');
 
-    if (isOnlineMatch) {
-      if (currentTurn === onlineMyColor) {
-        bottomCard.classList.add('active-turn');
-        topCard.classList.remove('active-turn');
-      } else {
-        topCard.classList.add('active-turn');
-        bottomCard.classList.remove('active-turn');
-      }
+    const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
+    const bottomColor = isOnlineMatch ? onlineMyColor : (isBoardFlipped ? 'b' : 'w');
+
+    if (currentTurn === bottomColor) {
+      bottomCard.classList.add('active-turn');
+      topCard.classList.remove('active-turn');
     } else {
-      if (currentTurn === 'w') {
-        bottomCard.classList.add('active-turn');
-        topCard.classList.remove('active-turn');
-      } else {
-        topCard.classList.add('active-turn');
-        bottomCard.classList.remove('active-turn');
-      }
+      topCard.classList.add('active-turn');
+      bottomCard.classList.remove('active-turn');
     }
 
     // Calculate captured pieces
@@ -833,8 +838,8 @@
     const advBottom = document.getElementById('advantage-bottom');
     const advTop = document.getElementById('advantage-top');
 
-    if (isOnlineMatch && onlineMyColor === 'b') {
-      // Perspective locked to Black at bottom:
+    if ((isOnlineMatch && onlineMyColor === 'b') || (!isOnlineMatch && isBoardFlipped)) {
+      // Perspective with Black at bottom:
       renderCapturedList('captured-bottom', capturedByBlack);
       renderCapturedList('captured-top', capturedByWhite);
 
@@ -980,7 +985,11 @@
     }
 
     setTimeout(() => {
-      gameOverModal.style.display = 'flex';
+      if ((game.in_checkmate() || game.in_stalemate()) && historyMoves.length > 0) {
+        startAutomaticGameReview(title, winnerText, outcome);
+      } else {
+        gameOverModal.style.display = 'flex';
+      }
     }, 400);
   }
 
@@ -1008,14 +1017,18 @@
         avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
       }
     } else {
-      document.getElementById('name-top').textContent = playerProfiles.b.name;
-      document.getElementById('name-bottom').textContent = playerProfiles.w.name;
+      const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
+      const bottomColor = isBoardFlipped ? 'b' : 'w';
+      const topColor = isBoardFlipped ? 'w' : 'b';
 
-      const topColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
-      const bottomColor = isDark ? '#c9c8c8' : PIECE_COLORS.w;
+      document.getElementById('name-top').textContent = playerProfiles[topColor].name;
+      document.getElementById('name-bottom').textContent = playerProfiles[bottomColor].name;
 
-      avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, topColor, 26);
-      avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, bottomColor, 26);
+      const topColorHex = isDark ? (topColor === 'b' ? '#e6e6e6' : '#c9c8c8') : PIECE_COLORS[topColor];
+      const bottomColorHex = isDark ? (bottomColor === 'b' ? '#e6e6e6' : '#c9c8c8') : PIECE_COLORS[bottomColor];
+
+      avatarTop.innerHTML = getPieceSvg(playerProfiles[topColor].avatar, topColorHex, 26);
+      avatarBottom.innerHTML = getPieceSvg(playerProfiles[bottomColor].avatar, bottomColorHex, 26);
     }
   }
 
@@ -1171,8 +1184,19 @@
   }
 
   function updateClockDisplays() {
-    const myTime = (isOnlineMatch && onlineMyColor === 'b') ? playerTimeLeft.b : playerTimeLeft.w;
-    const oppTime = (isOnlineMatch && onlineMyColor === 'b') ? playerTimeLeft.w : playerTimeLeft.b;
+    let myTime = playerTimeLeft.w;
+    let oppTime = playerTimeLeft.b;
+
+    if (isOnlineMatch) {
+      myTime = (onlineMyColor === 'b') ? playerTimeLeft.b : playerTimeLeft.w;
+      oppTime = (onlineMyColor === 'b') ? playerTimeLeft.w : playerTimeLeft.b;
+    } else {
+      const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
+      if (isBoardFlipped) {
+        myTime = playerTimeLeft.b;
+        oppTime = playerTimeLeft.w;
+      }
+    }
 
     if (clockBottom) clockBottom.innerHTML = formatClockDisplay(myTime);
     if (clockTop) clockTop.innerHTML = formatClockDisplay(oppTime);
@@ -1296,7 +1320,11 @@
     gameOverAvatar.innerHTML = getPieceSvg(avatarType, colorHex, 40);
 
     setTimeout(() => {
-      gameOverModal.style.display = 'flex';
+      if (historyMoves.length > 0) {
+        startAutomaticGameReview(title, winnerText, outcome);
+      } else {
+        gameOverModal.style.display = 'flex';
+      }
     }, 300);
   }
 
@@ -1935,11 +1963,23 @@
       });
     }
 
+    function getActivePlayerForTop() {
+      if (isOnlineMatch) return onlineMyColor === 'w' ? 'b' : 'w';
+      const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
+      return isBoardFlipped ? 'w' : 'b';
+    }
+
+    function getActivePlayerForBottom() {
+      if (isOnlineMatch) return onlineMyColor;
+      const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
+      return isBoardFlipped ? 'b' : 'w';
+    }
+
     // Name editing triggers
-    document.getElementById('name-top').addEventListener('click', () => openNameEditor('b'));
-    document.getElementById('player-top').querySelector('.btn-edit-name').addEventListener('click', () => openNameEditor('b'));
-    document.getElementById('name-bottom').addEventListener('click', () => openNameEditor('w'));
-    document.getElementById('player-bottom').querySelector('.btn-edit-name').addEventListener('click', () => openNameEditor('w'));
+    document.getElementById('name-top').addEventListener('click', () => openNameEditor(getActivePlayerForTop()));
+    document.getElementById('player-top').querySelector('.btn-edit-name').addEventListener('click', () => openNameEditor(getActivePlayerForTop()));
+    document.getElementById('name-bottom').addEventListener('click', () => openNameEditor(getActivePlayerForBottom()));
+    document.getElementById('player-bottom').querySelector('.btn-edit-name').addEventListener('click', () => openNameEditor(getActivePlayerForBottom()));
 
     btnSaveName.addEventListener('click', saveNameEditor);
     btnCancelName.addEventListener('click', () => {
@@ -1951,8 +1991,8 @@
     });
 
     // Avatar triggers
-    document.getElementById('avatar-top').addEventListener('click', () => openAvatarPicker('b'));
-    document.getElementById('avatar-bottom').addEventListener('click', () => openAvatarPicker('w'));
+    document.getElementById('avatar-top').addEventListener('click', () => openAvatarPicker(getActivePlayerForTop()));
+    document.getElementById('avatar-bottom').addEventListener('click', () => openAvatarPicker(getActivePlayerForBottom()));
     btnCloseAvatarModal.addEventListener('click', () => {
       avatarModal.style.display = 'none';
     });
