@@ -149,8 +149,14 @@ async function run() {
   `);
   console.log('Move execution:', moveResult);
 
-  // Allow checkmate check & auto review trigger
+  // Check game over modal & trigger review via explicit Review Game button
   await sleep(600);
+  const gameOverVisible = await evalJs(`document.getElementById('game-over-modal').style.display !== 'none'`);
+  console.log('✓ Game Over modal displayed without premature hijack:', gameOverVisible);
+
+  console.log('Clicking "Review Game" button from Game Over modal...');
+  await evalJs(`document.getElementById('btn-review-game-prompt').click()`);
+  await sleep(300);
 
   // Take screenshot of Calculating modal
   await takeShot('review_modal_step1_calculating.png');
@@ -175,7 +181,7 @@ async function run() {
   console.log(`✓ Analysis complete! White Accuracy: ${whiteAcc}, Black Accuracy: ${blackAcc}`);
 
   const counts = await evalJs(`({
-    brilliantW: document.getElementById('count-w-brilliant').textContent,
+    bestW: document.getElementById('count-w-best').textContent,
     blunderB: document.getElementById('count-b-blunder').textContent
   })`);
   console.log('✓ Classifications:', counts);
@@ -186,8 +192,14 @@ async function run() {
   await evalJs(`document.getElementById('btn-review-inspect').click()`);
   await sleep(400);
 
-  const bannerText = await evalJs(`document.getElementById('review-banner-info').textContent`);
-  console.log('✓ On-board Review banner text:', bannerText);
+  const startBannerText = await evalJs(`document.getElementById('review-banner-info').textContent`);
+  console.log('✓ On-board Review banner at start:', startBannerText);
+
+  // Step forward to move 1
+  await evalJs(`document.getElementById('btn-forward').click()`);
+  await sleep(200);
+  const move1BannerText = await evalJs(`document.getElementById('review-banner-info').textContent`);
+  console.log('✓ Move 1 banner text:', move1BannerText);
 
   await takeShot('review_modal_step3_board_inspection.png');
 

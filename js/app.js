@@ -981,9 +981,6 @@
 
     setTimeout(() => {
       gameOverModal.style.display = 'flex';
-      if (historyMoves.length > 0) {
-        startAutomaticGameReview(title, winnerText, outcome);
-      }
     }, 400);
   }
 
@@ -1300,9 +1297,6 @@
 
     setTimeout(() => {
       gameOverModal.style.display = 'flex';
-      if (historyMoves.length > 0) {
-        startAutomaticGameReview(title, winnerText, outcome);
-      }
     }, 300);
   }
 
@@ -1409,8 +1403,24 @@
 
   function updateMoveReviewBanner() {
     if (!moveReviewBanner) return;
-    if (!currentReviewData || !isReviewModeActive || currentViewIndex === 0) {
+    if (!currentReviewData || !isReviewModeActive) {
       moveReviewBanner.style.display = 'none';
+      return;
+    }
+
+    if (currentViewIndex === 0) {
+      if (bannerBadgeIcon) {
+        bannerBadgeIcon.innerHTML = `<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4 2v12l10-6z"/></svg>`;
+      }
+      if (bannerBadgeLabel) bannerBadgeLabel.textContent = 'Start';
+      if (reviewBannerBadge) {
+        reviewBannerBadge.className = 'review-banner-badge badge-book';
+      }
+      if (reviewBannerInfo) {
+        const total = currentReviewData.moveReviews ? currentReviewData.moveReviews.length : historyMoves.length;
+        reviewBannerInfo.textContent = `Start of Game • ${total} moves • Press Forward ( > ) to review`;
+      }
+      moveReviewBanner.style.display = 'flex';
       return;
     }
 
@@ -1767,9 +1777,9 @@
       btnReviewInspect.addEventListener('click', () => {
         closeReviewModal();
         isReviewModeActive = true;
-        currentViewIndex = historyMoves.length;
+        currentViewIndex = 0;
         renderView();
-        showToast('Use Back/Forward buttons or Move History to review moves.');
+        showToast('Game review started from initial position. Press > to review moves.');
       });
     }
 

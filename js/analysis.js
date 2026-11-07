@@ -23,6 +23,10 @@
     "e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4 g8f6": ["e1g1", "d2d3", "b1c3"],
     "e2e4 e7e5 g1f3 b8c6 f1c4": ["f8c5", "g8f6", "f8e7", "d7d6"],
     "e2e4 e7e5 g1f3 b8c6 f1c4 f8c5": ["c2c3", "d2d3", "b2b4", "e1g1", "d2d4"],
+    "e2e4 e7e5 f1c4": ["g8f6", "b8c6", "f8c5", "c7c6", "d7d6"],
+    "e2e4 e7e5 f1c4 g8f6": ["d2d3", "b1c3", "g1f3"],
+    "e2e4 e7e5 f1c4 b8c6": ["g1f3", "d2d4", "b1c3", "c2c3", "d1h5"],
+    "e2e4 e7e5 f1c4 f8c5": ["c2c3", "d2d3", "g1f3", "d1h5"],
     "e2e4 c7c5": ["g1f3", "b1c3", "c2c3", "d2d4", "f2f4", "g2g3"],
     "e2e4 c7c5 g1f3": ["d7d6", "b8c6", "e7e6", "g7g6", "a7a6"],
     "e2e4 c7c5 g1f3 d7d6": ["d2d4", "f1b5", "c2c3"],
@@ -120,14 +124,14 @@
     /**
      * Evaluates a single FEN position using Stockfish
      */
-    evaluatePosition(fen, depth = 8) {
+    evaluatePosition(fen, depth = 7) {
       return new Promise(async (resolve) => {
         const worker = await this.initWorker();
         if (!worker) {
           return resolve({ cp: 0, bestmove: null, mate: null });
         }
 
-        // Check if FEN is terminal checkmate
+        // Check if FEN is terminal checkmate or draw
         if (typeof Chess !== 'undefined') {
           try {
             const c = new Chess(fen);
@@ -143,11 +147,6 @@
         let latestCp = 0;
         let latestMate = null;
         let bestmove = null;
-
-        const timer = setTimeout(() => {
-          worker.removeEventListener('message', onMsg);
-          resolve({ cp: latestCp, mate: latestMate, bestmove });
-        }, 1500); // 1.5s timeout safeguard per position
 
         const onMsg = (event) => {
           const line = typeof event.data === 'string' ? event.data : '';
@@ -173,7 +172,13 @@
           }
         };
 
+        const timer = setTimeout(() => {
+          worker.removeEventListener('message', onMsg);
+          resolve({ cp: latestCp, mate: latestMate, bestmove });
+        }, 1200);
+
         worker.addEventListener('message', onMsg);
+        worker.postMessage('stop');
         worker.postMessage('position fen ' + fen);
         worker.postMessage('go depth ' + depth);
       });
@@ -190,7 +195,7 @@
       // 1. Evaluate every position (from initial board to final position)
       for (let i = 0; i < totalPositions; i++) {
         if (!this.isAnalyzing) break;
-        const evalResult = await this.evaluatePosition(fens[i], 8);
+        const evalResult = await this.evaluatePosition(fens[i], 7);
         evals.push(evalResult);
 
         if (onProgress) {
@@ -221,10 +226,7 @@
 
         const winBefore = centipawnsToWinPercent(playerCpBefore);
         const winAfter = centipawnsToWinPercent(playerCpAfter);
-        const winLoss = Math.max(0, winBefore - winAfter);
-
-        const moveAcc = winLossToAccuracy(winLoss);
-        accuracies[player].push(moveAcc);
+        let winLoss = Math.max(0, winBefore - winAfter);
 
         // Check opening book
         const bookList = OPENING_BOOK[uciHistory.join(' ')];
@@ -234,32 +236,60 @@
         // Check if piece sacrificed (for Brilliant)
         let isSacrifice = false;
         if (!isBook && move.piece && move.piece !== 'p' && move.piece !== 'k') {
-          const movingVal = PIECE_VALUES[move.piece.toLowerCase()] || 0;
-          const capturedVal = move.captured ? (PIECE_VALUES[move.captured.toLowerCase()] || 0) : 0;
-          if (movingVal > capturedVal && winLoss <= 2.0 && winAfter >= 45) {
-            isSacrifice = true;
-          }
+          try {
+            const nextFen = fens[i + 1];
+            if (nextFen && typeof Chess !== 'undefined') {
+              const cNext = new Chess(nextFen);
+              if (!cNext.in_checkmate()) {
+                const movingVal = PIECE_VALUES[move.piece.toLowerCase()] || 0;
+                const capturedVal = move.captured ? (PIECE_VALUES[move.captured.toLowerCase()] || 0) : 0;
+                const opponentMoves = cNext.moves({ verbose: true });
+                const attackedByEqualOrLess = opponentMoves.some(m => m.to === move.to && (PIECE_VALUES[m.piece] || 0) <= movingVal);
+                if (attackedByEqualOrLess && capturedVal < movingVal && winLoss <= 1.5 && winAfter >= 45) {
+                  isSacrifice = true;
+                }
+              }
+            }
+          } catch (e) {}
         }
 
-        // Determine badge classification
+        const isEngineBest = Boolean(evalBefore.bestmove && evalBefore.bestmove === uci);
+
+        // Determine badge classification & calibrated move accuracy
         let classification = 'good';
+        let moveAcc = 100;
+
         if (isBook) {
           classification = 'book';
+          winLoss = 0;
+          moveAcc = 100;
         } else if (isSacrifice) {
           classification = 'brilliant';
-        } else if (winLoss <= 1.5 || (evalBefore.bestmove && evalBefore.bestmove === uci)) {
+          winLoss = 0;
+          moveAcc = 100;
+        } else if (isEngineBest || winLoss <= 1.5) {
           classification = 'best';
+          winLoss = 0;
+          moveAcc = 100;
         } else if (winLoss <= 6.0) {
           classification = 'good';
+          moveAcc = winLossToAccuracy(winLoss);
         } else if (winLoss <= 16.0) {
           classification = 'inaccuracy';
+          moveAcc = winLossToAccuracy(winLoss);
         } else if (winLoss <= 28.0) {
           classification = 'mistake';
+          moveAcc = winLossToAccuracy(winLoss);
         } else {
           classification = 'blunder';
+          moveAcc = winLossToAccuracy(winLoss);
         }
 
         counts[player][classification]++;
+        accuracies[player].push(moveAcc);
+
+        // Standard chess eval: positive for White advantage, negative for Black advantage
+        const evalDisplayWhitePerspective = player === 'w' ? playerCpAfter : -playerCpAfter;
 
         moveReviews.push({
           index: i,
@@ -268,7 +298,7 @@
           san: move.san || uci,
           player: player,
           classification: classification,
-          evalCp: playerCpAfter,
+          evalCp: evalDisplayWhitePerspective,
           bestmove: evalBefore.bestmove,
           accuracy: moveAcc,
           winLoss: winLoss
