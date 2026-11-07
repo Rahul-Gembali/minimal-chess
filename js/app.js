@@ -418,6 +418,9 @@
 
   // --- Board Orientation & Turn Rotation ---
   function applyBoardOrientation(activeGame = (isViewingLive() ? game : new Chess(historyFens[currentViewIndex]))) {
+    const topPlayerCard = document.getElementById('player-top');
+    const bottomPlayerCard = document.getElementById('player-bottom');
+
     if (isOnlineMatch) {
       // In online match: player's assigned color is permanently at the bottom
       if (onlineMyColor === 'b') {
@@ -427,10 +430,12 @@
       }
       chessboardEl.classList.remove('pieces-facing-black');
       chessboardEl.classList.remove('tabletop-mode');
-      const topPlayerCard = document.getElementById('player-top');
-      const bottomPlayerCard = document.getElementById('player-bottom');
-      if (topPlayerCard) topPlayerCard.classList.remove('facing-opponent');
-      if (bottomPlayerCard) bottomPlayerCard.classList.remove('facing-opponent');
+      if (topPlayerCard) {
+        topPlayerCard.classList.remove('facing-opponent', 'facing-black-perspective');
+      }
+      if (bottomPlayerCard) {
+        bottomPlayerCard.classList.remove('facing-opponent', 'facing-black-perspective');
+      }
       renderPlayerProfiles();
       updateClockDisplays();
       return;
@@ -451,25 +456,34 @@
     }
 
     // 2. Piece & Tabletop orientation:
-    const topPlayerCard = document.getElementById('player-top');
-    const bottomPlayerCard = document.getElementById('player-bottom');
-
     if (isTabletopMode) {
       chessboardEl.classList.add('tabletop-mode');
       chessboardEl.classList.remove('pieces-facing-black');
-      if (topPlayerCard) topPlayerCard.classList.add('facing-opponent');
-      if (bottomPlayerCard) bottomPlayerCard.classList.remove('facing-opponent');
     } else {
       chessboardEl.classList.remove('tabletop-mode');
-      // In mobile perspective, keep name boxes right-side up and legible
-      if (topPlayerCard) topPlayerCard.classList.remove('facing-opponent');
-      if (bottomPlayerCard) bottomPlayerCard.classList.remove('facing-opponent');
-
       if (pieceFlipEnabled && activeTurn === 'b' && !shouldFlipBoard) {
         chessboardEl.classList.add('pieces-facing-black');
       } else {
         chessboardEl.classList.remove('pieces-facing-black');
       }
+    }
+
+    // 3. Dual Name Tag Perspective Rotation:
+    // Both player name cards rotate smoothly to face the active player's perspective:
+    // On White's turn: both face White (0deg)
+    // On Black's turn: both rotate to face Black (180deg)
+    const isBlackPerspective = shouldFlipBoard ? (activeTurn === 'w') : (activeTurn === 'b');
+
+    if (topPlayerCard && bottomPlayerCard) {
+      if (isBlackPerspective) {
+        topPlayerCard.classList.add('facing-black-perspective');
+        bottomPlayerCard.classList.add('facing-black-perspective');
+      } else {
+        topPlayerCard.classList.remove('facing-black-perspective');
+        bottomPlayerCard.classList.remove('facing-black-perspective');
+      }
+      topPlayerCard.classList.remove('facing-opponent');
+      bottomPlayerCard.classList.remove('facing-opponent');
     }
 
     renderPlayerProfiles();
@@ -985,12 +999,12 @@
     }
 
     setTimeout(() => {
-      if ((game.in_checkmate() || game.in_stalemate()) && historyMoves.length > 0) {
+      if (historyMoves.length > 0) {
         startAutomaticGameReview(title, winnerText, outcome);
       } else {
         gameOverModal.style.display = 'flex';
       }
-    }, 400);
+    }, 350);
   }
 
   // --- Player Customization: Names & Avatars ---

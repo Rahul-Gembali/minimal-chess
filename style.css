@@ -393,9 +393,16 @@ body {
   padding: 3px 6px;
   background: transparent;
   border-radius: 10px;
-  transition: background 0.25s ease, border-color 0.25s ease;
-  transform: none !important;
+  transform: rotate(0deg);
+  transform-origin: center center;
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease, border-color 0.25s ease;
+  will-change: transform;
   flex-shrink: 0;
+}
+
+.player-card.facing-black-perspective,
+.player-card.facing-opponent {
+  transform: rotate(180deg) !important;
 }
 
 .player-card.active-turn {
@@ -629,16 +636,6 @@ body {
   100% { transform: scale(1); }
 }
 
-/* Opponent 180° rotation in tabletop / pass-and-play */
-#player-top.facing-opponent .player-clock {
-  transform: rotate(180deg);
-}
-
-#player-top.facing-opponent .player-clock.critical-time,
-#player-top.facing-opponent .player-clock.low-time {
-  transform: rotate(180deg) scale(1.05);
-}
-
 .turn-badge {
   font-size: 11px;
   font-weight: 700;
@@ -670,11 +667,6 @@ body {
 .player-card.active-turn .turn-badge {
   opacity: 1;
   transform: translateY(0);
-}
-
-#player-top.facing-opponent.active-turn .turn-badge {
-  opacity: 1;
-  transform: rotate(180deg);
 }
 
 /* --------------------------------------------------------------------------
@@ -848,15 +840,9 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   Internal In-Place Flip for Top Player (Pass-and-Play Turn Orientation)
-   Smooth whole-card rotation for Tabletop mode; normal upright in mobile
+   Internal In-Place Flip for Players (Pass-and-Play Turn Orientation)
+   Smooth whole-card rotation for active player perspective
    -------------------------------------------------------------------------- */
-#player-top.facing-opponent {
-  transform: rotate(180deg) !important;
-  transform-origin: center center;
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform;
-}
 
 /* 1. Piece silhouette inside circular avatar */
 .player-avatar svg,

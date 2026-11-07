@@ -72,6 +72,57 @@
     return Math.min(100, Math.max(0, Math.round(raw * 10) / 10));
   }
 
+  const PST_BONUS = {
+    'd4': 20, 'e4': 20, 'd5': 20, 'e5': 20,
+    'c4': 10, 'f4': 10, 'c5': 10, 'f5': 10,
+    'd3': 10, 'e3': 10, 'd6': 10, 'e6': 10
+  };
+
+  function evaluatePositionHeuristic(fen) {
+    if (typeof Chess === 'undefined') return { cp: 0, mate: null, bestmove: null };
+    try {
+      const c = new Chess(fen);
+      if (c.in_checkmate()) {
+        return { cp: -10000, mate: -1, bestmove: null };
+      }
+      if (c.in_draw() || c.in_stalemate()) {
+        return { cp: 0, mate: null, bestmove: null };
+      }
+
+      const board = c.board();
+      const turn = c.turn();
+      let whiteScore = 0;
+      let blackScore = 0;
+
+      for (let r = 0; r < 8; r++) {
+        for (let col = 0; col < 8; col++) {
+          const piece = board[r][col];
+          if (!piece) continue;
+          const val = (PIECE_VALUES[piece.type] || 1) * 100;
+          const sq = String.fromCharCode(97 + col) + (8 - r);
+          const bonus = PST_BONUS[sq] || 0;
+
+          if (piece.color === 'w') {
+            whiteScore += val + bonus;
+          } else {
+            blackScore += val + bonus;
+          }
+        }
+      }
+
+      const moves = c.moves({ verbose: true });
+      const bestmove = moves.length > 0 ? toUci(moves[0]) : null;
+      const mobility = moves.length * 5;
+
+      const netWhite = (whiteScore - blackScore) + (turn === 'w' ? mobility : -mobility);
+      const cp = turn === 'w' ? netWhite : -netWhite;
+
+      return { cp, mate: null, bestmove };
+    } catch (e) {
+      return { cp: 0, mate: null, bestmove: null };
+    }
+  }
+
   class ChessAnalysisEngine {
     constructor(workerPath = 'js/stockfish.js') {
       this.workerPath = workerPath;
@@ -87,12 +138,24 @@
         try {
           this.worker = new Worker(this.workerPath);
         } catch (e) {
-          this.worker = new Worker('./js/stockfish.js');
+          try {
+            this.worker = new Worker('./js/stockfish.js');
+          } catch (e2) {
+            console.warn('Stockfish worker unavailable, using heuristic engine:', e2);
+            this.worker = null;
+            return null;
+          }
         }
       }
 
+      if (!this.worker) return null;
+
       await new Promise((resolve) => {
-        const timeout = setTimeout(resolve, 3000);
+        const timeout = setTimeout(() => {
+          this.isReady = true;
+          resolve();
+        }, 1500);
+
         const onInit = (e) => {
           const line = typeof e.data === 'string' ? e.data : '';
           if (line.includes('readyok')) {
@@ -102,9 +165,21 @@
             resolve();
           }
         };
+
         this.worker.addEventListener('message', onInit);
-        this.worker.postMessage('uci');
-        this.worker.postMessage('isready');
+        this.worker.addEventListener('error', () => {
+          clearTimeout(timeout);
+          this.isReady = false;
+          resolve();
+        });
+
+        try {
+          this.worker.postMessage('uci');
+          this.worker.postMessage('isready');
+        } catch (err) {
+          clearTimeout(timeout);
+          resolve();
+        }
       });
 
       return this.worker;
@@ -122,16 +197,11 @@
     }
 
     /**
-     * Evaluates a single FEN position using Stockfish
+     * Evaluates a single FEN position using Stockfish (with instant heuristic fallback)
      */
-    evaluatePosition(fen, depth = 7) {
+    evaluatePosition(fen, depth = 5) {
       return new Promise(async (resolve) => {
-        const worker = await this.initWorker();
-        if (!worker) {
-          return resolve({ cp: 0, bestmove: null, mate: null });
-        }
-
-        // Check if FEN is terminal checkmate or draw
+        // Fast-path terminal evaluations
         if (typeof Chess !== 'undefined') {
           try {
             const c = new Chess(fen);
@@ -142,6 +212,11 @@
               return resolve({ cp: 0, mate: null, bestmove: null });
             }
           } catch (e) {}
+        }
+
+        const worker = await this.initWorker();
+        if (!worker) {
+          return resolve(evaluatePositionHeuristic(fen));
         }
 
         let latestCp = 0;
@@ -173,14 +248,22 @@
         };
 
         const timer = setTimeout(() => {
-          worker.removeEventListener('message', onMsg);
+          if (worker) worker.removeEventListener('message', onMsg);
+          if (latestCp === 0 && !bestmove) {
+            return resolve(evaluatePositionHeuristic(fen));
+          }
           resolve({ cp: latestCp, mate: latestMate, bestmove });
-        }, 1200);
+        }, 400);
 
         worker.addEventListener('message', onMsg);
-        worker.postMessage('stop');
-        worker.postMessage('position fen ' + fen);
-        worker.postMessage('go depth ' + depth);
+        try {
+          worker.postMessage('stop');
+          worker.postMessage('position fen ' + fen);
+          worker.postMessage('go depth ' + depth);
+        } catch (e) {
+          clearTimeout(timer);
+          resolve(evaluatePositionHeuristic(fen));
+        }
       });
     }
 
@@ -195,7 +278,7 @@
       // 1. Evaluate every position (from initial board to final position)
       for (let i = 0; i < totalPositions; i++) {
         if (!this.isAnalyzing) break;
-        const evalResult = await this.evaluatePosition(fens[i], 7);
+        const evalResult = await this.evaluatePosition(fens[i], 5);
         evals.push(evalResult);
 
         if (onProgress) {
