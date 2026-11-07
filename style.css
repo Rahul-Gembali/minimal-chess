@@ -32,24 +32,24 @@
   --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Geist Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "SF Mono", "Geist Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   
-  --board-size: min(88vw, calc(100vh - 220px), calc(100dvh - 220px), 430px);
+  --board-size: min(calc(100vw - 16px), calc(100vh - 195px), calc(100dvh - 195px), 480px);
 }
 
 @media (min-width: 768px) {
   :root {
-    --board-size: min(72vw, calc(100vh - 235px), calc(100dvh - 235px), 470px);
+    --board-size: min(72vw, calc(100vh - 235px), calc(100dvh - 235px), 520px);
   }
 }
 
 @media (min-width: 1024px) {
   :root {
-    --board-size: min(65vw, calc(100vh - 240px), calc(100dvh - 240px), 500px);
+    --board-size: min(65vw, calc(100vh - 240px), calc(100dvh - 240px), 540px);
   }
 }
 
 @media (min-height: 850px) and (min-width: 1024px) {
   :root {
-    --board-size: min(60vw, calc(100vh - 250px), calc(100dvh - 250px), 540px);
+    --board-size: min(60vw, calc(100vh - 250px), calc(100dvh - 250px), 560px);
   }
 }
 
@@ -113,7 +113,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 8px 14px 10px;
+  padding: 8px 8px 10px;
   margin: 0 auto;
   box-sizing: border-box;
   overflow: hidden;
