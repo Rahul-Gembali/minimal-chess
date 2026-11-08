@@ -417,15 +417,11 @@
   }
 
   // --- Board Orientation & Turn Handling ---
-  function isCurrentBottomColorBlack(activeTurn = (isViewingLive() ? game.turn() : new Chess(historyFens[currentViewIndex]).turn())) {
+  function isCurrentBottomColorBlack() {
     if (isOnlineMatch) {
       return onlineMyColor === 'b';
     }
-    const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
-    if (isBoardFlipped) return true;
-    if (autoFlipEnabled && activeTurn === 'b') return true;
-    if (pieceFlipEnabled && activeTurn === 'b' && !isTabletopMode) return true;
-    return false;
+    return Boolean(boardContainerEl && boardContainerEl.classList.contains('flipped'));
   }
 
   function applyBoardOrientation(activeGame = (isViewingLive() ? game : new Chess(historyFens[currentViewIndex]))) {
@@ -820,7 +816,7 @@
     const topCard = document.getElementById('player-top');
     const bottomCard = document.getElementById('player-bottom');
 
-    const isBottomBlack = isCurrentBottomColorBlack(currentTurn);
+    const isBottomBlack = isCurrentBottomColorBlack();
     const bottomColor = isBottomBlack ? 'b' : 'w';
 
     if (currentTurn === bottomColor) {
@@ -993,10 +989,12 @@
     if (winningColor) {
       const avatarType = playerProfiles[winningColor].avatar;
       const isDark = currentTheme === 'dark';
-      const colorHex = isDark ? '#e6e6e6' : PIECE_COLORS[winningColor];
+      const colorHex = (winningColor === 'b') ? '#1a1a1a' : (isDark ? '#f5f5f5' : '#888888');
       gameOverAvatar.innerHTML = getPieceSvg(avatarType, colorHex, 40);
+      gameOverAvatar.className = `game-over-avatar avatar-${winningColor === 'b' ? 'black' : 'white'}`;
     } else {
       gameOverAvatar.innerHTML = getPieceSvg('k', '#888888', 40);
+      gameOverAvatar.className = 'game-over-avatar';
     }
 
     setTimeout(() => {
@@ -1022,33 +1020,57 @@
     const bottomColor = isBottomBlack ? 'b' : 'w';
     const topColor = isBottomBlack ? 'w' : 'b';
 
+    const whitePieceColor = isDark ? '#f5f5f5' : '#888888';
+    const blackPieceColor = '#1a1a1a';
+
     const updateDomContent = () => {
       if (isOnlineMatch) {
-        const whitePieceColor = isDark ? '#c9c8c8' : PIECE_COLORS.w;
-        const blackPieceColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
-
         if (onlineMyColor === 'b') {
           document.getElementById('name-top').textContent = 'Opponent (White)';
           document.getElementById('name-bottom').textContent = `${playerProfiles.b.name || 'You'} (Black)`;
 
           avatarTop.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
           avatarBottom.innerHTML = getPieceSvg(playerProfiles.b.avatar, blackPieceColor, 26);
+          if (avatarTop) {
+            avatarTop.classList.remove('avatar-black');
+            avatarTop.classList.add('avatar-white');
+          }
+          if (avatarBottom) {
+            avatarBottom.classList.remove('avatar-white');
+            avatarBottom.classList.add('avatar-black');
+          }
         } else {
           document.getElementById('name-top').textContent = 'Opponent (Black)';
           document.getElementById('name-bottom').textContent = `${playerProfiles.w.name || 'You'} (White)`;
 
           avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, blackPieceColor, 26);
           avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
+          if (avatarTop) {
+            avatarTop.classList.remove('avatar-white');
+            avatarTop.classList.add('avatar-black');
+          }
+          if (avatarBottom) {
+            avatarBottom.classList.remove('avatar-black');
+            avatarBottom.classList.add('avatar-white');
+          }
         }
       } else {
         document.getElementById('name-top').textContent = playerProfiles[topColor].name;
         document.getElementById('name-bottom').textContent = playerProfiles[bottomColor].name;
 
-        const topColorHex = isDark ? (topColor === 'b' ? '#e6e6e6' : '#c9c8c8') : PIECE_COLORS[topColor];
-        const bottomColorHex = isDark ? (bottomColor === 'b' ? '#e6e6e6' : '#c9c8c8') : PIECE_COLORS[bottomColor];
+        const topColorHex = (topColor === 'b') ? blackPieceColor : whitePieceColor;
+        const bottomColorHex = (bottomColor === 'b') ? blackPieceColor : whitePieceColor;
 
-        avatarTop.innerHTML = getPieceSvg(playerProfiles[topColor].avatar, topColorHex, 26);
-        avatarBottom.innerHTML = getPieceSvg(playerProfiles[bottomColor].avatar, bottomColorHex, 26);
+        if (avatarTop) {
+          avatarTop.innerHTML = getPieceSvg(playerProfiles[topColor].avatar, topColorHex, 26);
+          avatarTop.classList.toggle('avatar-black', topColor === 'b');
+          avatarTop.classList.toggle('avatar-white', topColor === 'w');
+        }
+        if (avatarBottom) {
+          avatarBottom.innerHTML = getPieceSvg(playerProfiles[bottomColor].avatar, bottomColorHex, 26);
+          avatarBottom.classList.toggle('avatar-black', bottomColor === 'b');
+          avatarBottom.classList.toggle('avatar-white', bottomColor === 'w');
+        }
       }
     };
 
@@ -1100,13 +1122,13 @@
   function openAvatarPicker(playerKey) {
     activeAvatarPlayer = playerKey;
     const isDark = currentTheme === 'dark';
-    const colorHex = isDark ? '#e6e6e6' : PIECE_COLORS[playerKey];
+    const colorHex = (playerKey === 'b') ? '#1a1a1a' : (isDark ? '#f5f5f5' : '#888888');
     avatarModalPlayerDesc.textContent = `Choose an avatar for ${playerProfiles[playerKey].name}`;
     avatarChoices.innerHTML = '';
 
     AVAILABLE_AVATARS.forEach(pType => {
       const btn = document.createElement('div');
-      btn.className = 'avatar-choice';
+      btn.className = `avatar-choice avatar-${playerKey === 'b' ? 'black' : 'white'}`;
       if (playerProfiles[playerKey].avatar === pType) {
         btn.classList.add('selected');
       }
@@ -1356,8 +1378,9 @@
 
     const avatarType = playerProfiles[winningColor].avatar;
     const isDark = currentTheme === 'dark';
-    const colorHex = isDark ? '#e6e6e6' : PIECE_COLORS[winningColor];
+    const colorHex = (winningColor === 'b') ? '#1a1a1a' : (isDark ? '#f5f5f5' : '#888888');
     gameOverAvatar.innerHTML = getPieceSvg(avatarType, colorHex, 40);
+    gameOverAvatar.className = `game-over-avatar avatar-${winningColor === 'b' ? 'black' : 'white'}`;
 
     setTimeout(() => {
       if (historyMoves.length > 0) {
@@ -2004,15 +2027,11 @@
     }
 
     function getActivePlayerForTop() {
-      if (isOnlineMatch) return onlineMyColor === 'w' ? 'b' : 'w';
-      const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
-      return isBoardFlipped ? 'w' : 'b';
+      return isCurrentBottomColorBlack() ? 'w' : 'b';
     }
 
     function getActivePlayerForBottom() {
-      if (isOnlineMatch) return onlineMyColor;
-      const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
-      return isBoardFlipped ? 'b' : 'w';
+      return isCurrentBottomColorBlack() ? 'b' : 'w';
     }
 
     // Name editing triggers

@@ -168,7 +168,7 @@ async function run() {
 
     await sleep(600);
 
-    console.log('3. Checking Black turn state (Names flipped smoothly without any rotation)...');
+    console.log('3. Checking Black turn state (White card at bottom, Black card at top, Black active)...');
     const blackTurnStatus = await evalJs(`
       (() => {
         const top = document.getElementById('player-top');
@@ -189,14 +189,18 @@ async function run() {
     `);
     console.log('Black turn state:', blackTurnStatus);
 
-    if (blackTurnStatus.nameBottom !== 'Black' || blackTurnStatus.nameTop !== 'White') {
-      throw new Error(`Names should have flipped to Black at bottom, got: bottom=${blackTurnStatus.nameBottom}, top=${blackTurnStatus.nameTop}`);
+    if (blackTurnStatus.nameBottom !== 'White' || blackTurnStatus.nameTop !== 'Black') {
+      throw new Error(`Expected White at bottom and Black at top on Black's turn, got: bottom=${blackTurnStatus.nameBottom}, top=${blackTurnStatus.nameTop}`);
+    }
+    if (blackTurnStatus.activeTurn !== 'player-top') {
+      throw new Error(`Expected active turn indicator on player-top for Black, got: ${blackTurnStatus.activeTurn}`);
     }
     if (blackTurnStatus.topTransform.includes('matrix(-1') || blackTurnStatus.bottomTransform.includes('matrix(-1') ||
         blackTurnStatus.topTransform.includes('rotate') || blackTurnStatus.bottomTransform.includes('rotate')) {
       throw new Error('Rotation detected on Black turn! Cards must remain horizontal without spinning over chessboard.');
     }
-    console.log('✓ Names flipped: Active player Black is at bottom, opponent White is at top!');
+    console.log('✓ Cards correctly match armies: White is at bottom, Black is at top!');
+    console.log('✓ Active turn correctly illuminated on player-top (Black)!');
     console.log('✓ ZERO rotation confirmed on both cards! Pure horizontal placement.');
 
     await takeShot('test_zero_rot_2_black_turn.png');
