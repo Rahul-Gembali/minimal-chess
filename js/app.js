@@ -416,7 +416,18 @@
     return currentViewIndex > 0 ? historyMoves[currentViewIndex - 1] : null;
   }
 
-  // --- Board Orientation & Turn Rotation ---
+  // --- Board Orientation & Turn Handling ---
+  function isCurrentBottomColorBlack(activeTurn = (isViewingLive() ? game.turn() : new Chess(historyFens[currentViewIndex]).turn())) {
+    if (isOnlineMatch) {
+      return onlineMyColor === 'b';
+    }
+    const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
+    if (isBoardFlipped) return true;
+    if (autoFlipEnabled && activeTurn === 'b') return true;
+    if (pieceFlipEnabled && activeTurn === 'b' && !isTabletopMode) return true;
+    return false;
+  }
+
   function applyBoardOrientation(activeGame = (isViewingLive() ? game : new Chess(historyFens[currentViewIndex]))) {
     const topPlayerCard = document.getElementById('player-top');
     const bottomPlayerCard = document.getElementById('player-bottom');
@@ -431,10 +442,10 @@
       chessboardEl.classList.remove('pieces-facing-black');
       chessboardEl.classList.remove('tabletop-mode');
       if (topPlayerCard) {
-        topPlayerCard.classList.remove('facing-opponent', 'facing-black-perspective');
+        topPlayerCard.classList.remove('facing-opponent', 'facing-black-perspective', 'card-flipping-out', 'card-flipping-in');
       }
       if (bottomPlayerCard) {
-        bottomPlayerCard.classList.remove('facing-opponent', 'facing-black-perspective');
+        bottomPlayerCard.classList.remove('facing-opponent', 'facing-black-perspective', 'card-flipping-out', 'card-flipping-in');
       }
       renderPlayerProfiles();
       updateClockDisplays();
@@ -468,22 +479,12 @@
       }
     }
 
-    // 3. Dual Name Tag Perspective Rotation:
-    // Both player name cards rotate smoothly to face the active player's perspective:
-    // On White's turn: both face White (0deg)
-    // On Black's turn: both rotate to face Black (180deg)
-    const isBlackPerspective = shouldFlipBoard ? (activeTurn === 'w') : (activeTurn === 'b');
-
-    if (topPlayerCard && bottomPlayerCard) {
-      if (isBlackPerspective) {
-        topPlayerCard.classList.add('facing-black-perspective');
-        bottomPlayerCard.classList.add('facing-black-perspective');
-      } else {
-        topPlayerCard.classList.remove('facing-black-perspective');
-        bottomPlayerCard.classList.remove('facing-black-perspective');
-      }
-      topPlayerCard.classList.remove('facing-opponent');
-      bottomPlayerCard.classList.remove('facing-opponent');
+    // 3. Name card orientation (Zero rotation - cards stay horizontal)
+    if (topPlayerCard) {
+      topPlayerCard.classList.remove('facing-opponent', 'facing-black-perspective');
+    }
+    if (bottomPlayerCard) {
+      bottomPlayerCard.classList.remove('facing-opponent', 'facing-black-perspective');
     }
 
     renderPlayerProfiles();
@@ -819,8 +820,8 @@
     const topCard = document.getElementById('player-top');
     const bottomCard = document.getElementById('player-bottom');
 
-    const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
-    const bottomColor = isOnlineMatch ? onlineMyColor : (isBoardFlipped ? 'b' : 'w');
+    const isBottomBlack = isCurrentBottomColorBlack(currentTurn);
+    const bottomColor = isBottomBlack ? 'b' : 'w';
 
     if (currentTurn === bottomColor) {
       bottomCard.classList.add('active-turn');
@@ -852,7 +853,7 @@
     const advBottom = document.getElementById('advantage-bottom');
     const advTop = document.getElementById('advantage-top');
 
-    if ((isOnlineMatch && onlineMyColor === 'b') || (!isOnlineMatch && isBoardFlipped)) {
+    if (isBottomBlack) {
       // Perspective with Black at bottom:
       renderCapturedList('captured-bottom', capturedByBlack);
       renderCapturedList('captured-top', capturedByWhite);
@@ -1008,41 +1009,73 @@
   }
 
   // --- Player Customization: Names & Avatars ---
-  function renderPlayerProfiles() {
+  let lastRenderedBottomColor = null;
+
+  function renderPlayerProfiles(immediate = false) {
     const isDark = currentTheme === 'dark';
     const avatarTop = document.getElementById('avatar-top');
     const avatarBottom = document.getElementById('avatar-bottom');
+    const topCard = document.getElementById('player-top');
+    const bottomCard = document.getElementById('player-bottom');
 
-    if (isOnlineMatch) {
-      const whitePieceColor = isDark ? '#c9c8c8' : PIECE_COLORS.w;
-      const blackPieceColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
+    const isBottomBlack = isCurrentBottomColorBlack();
+    const bottomColor = isBottomBlack ? 'b' : 'w';
+    const topColor = isBottomBlack ? 'w' : 'b';
 
-      if (onlineMyColor === 'b') {
-        document.getElementById('name-top').textContent = 'Opponent (White)';
-        document.getElementById('name-bottom').textContent = `${playerProfiles.b.name || 'You'} (Black)`;
+    const updateDomContent = () => {
+      if (isOnlineMatch) {
+        const whitePieceColor = isDark ? '#c9c8c8' : PIECE_COLORS.w;
+        const blackPieceColor = isDark ? '#e6e6e6' : PIECE_COLORS.b;
 
-        avatarTop.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
-        avatarBottom.innerHTML = getPieceSvg(playerProfiles.b.avatar, blackPieceColor, 26);
+        if (onlineMyColor === 'b') {
+          document.getElementById('name-top').textContent = 'Opponent (White)';
+          document.getElementById('name-bottom').textContent = `${playerProfiles.b.name || 'You'} (Black)`;
+
+          avatarTop.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
+          avatarBottom.innerHTML = getPieceSvg(playerProfiles.b.avatar, blackPieceColor, 26);
+        } else {
+          document.getElementById('name-top').textContent = 'Opponent (Black)';
+          document.getElementById('name-bottom').textContent = `${playerProfiles.w.name || 'You'} (White)`;
+
+          avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, blackPieceColor, 26);
+          avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
+        }
       } else {
-        document.getElementById('name-top').textContent = 'Opponent (Black)';
-        document.getElementById('name-bottom').textContent = `${playerProfiles.w.name || 'You'} (White)`;
+        document.getElementById('name-top').textContent = playerProfiles[topColor].name;
+        document.getElementById('name-bottom').textContent = playerProfiles[bottomColor].name;
 
-        avatarTop.innerHTML = getPieceSvg(playerProfiles.b.avatar, blackPieceColor, 26);
-        avatarBottom.innerHTML = getPieceSvg(playerProfiles.w.avatar, whitePieceColor, 26);
+        const topColorHex = isDark ? (topColor === 'b' ? '#e6e6e6' : '#c9c8c8') : PIECE_COLORS[topColor];
+        const bottomColorHex = isDark ? (bottomColor === 'b' ? '#e6e6e6' : '#c9c8c8') : PIECE_COLORS[bottomColor];
+
+        avatarTop.innerHTML = getPieceSvg(playerProfiles[topColor].avatar, topColorHex, 26);
+        avatarBottom.innerHTML = getPieceSvg(playerProfiles[bottomColor].avatar, bottomColorHex, 26);
       }
+    };
+
+    const colorsSwapped = (lastRenderedBottomColor !== null && lastRenderedBottomColor !== bottomColor);
+    lastRenderedBottomColor = bottomColor;
+
+    if (colorsSwapped && !immediate && topCard && bottomCard) {
+      // Outward slide-fade flip: smoothly moves AWAY from the chessboard (never over it)
+      topCard.classList.remove('card-flipping-in');
+      bottomCard.classList.remove('card-flipping-in');
+      topCard.classList.add('card-flipping-out');
+      bottomCard.classList.add('card-flipping-out');
+
+      setTimeout(() => {
+        updateDomContent();
+        topCard.classList.remove('card-flipping-out');
+        bottomCard.classList.remove('card-flipping-out');
+        topCard.classList.add('card-flipping-in');
+        bottomCard.classList.add('card-flipping-in');
+
+        setTimeout(() => {
+          topCard.classList.remove('card-flipping-in');
+          bottomCard.classList.remove('card-flipping-in');
+        }, 160);
+      }, 120);
     } else {
-      const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
-      const bottomColor = isBoardFlipped ? 'b' : 'w';
-      const topColor = isBoardFlipped ? 'w' : 'b';
-
-      document.getElementById('name-top').textContent = playerProfiles[topColor].name;
-      document.getElementById('name-bottom').textContent = playerProfiles[bottomColor].name;
-
-      const topColorHex = isDark ? (topColor === 'b' ? '#e6e6e6' : '#c9c8c8') : PIECE_COLORS[topColor];
-      const bottomColorHex = isDark ? (bottomColor === 'b' ? '#e6e6e6' : '#c9c8c8') : PIECE_COLORS[bottomColor];
-
-      avatarTop.innerHTML = getPieceSvg(playerProfiles[topColor].avatar, topColorHex, 26);
-      avatarBottom.innerHTML = getPieceSvg(playerProfiles[bottomColor].avatar, bottomColorHex, 26);
+      updateDomContent();
     }
   }
 
@@ -1198,19 +1231,12 @@
   }
 
   function updateClockDisplays() {
-    let myTime = playerTimeLeft.w;
-    let oppTime = playerTimeLeft.b;
+    const isBottomBlack = isCurrentBottomColorBlack();
+    const bottomColor = isBottomBlack ? 'b' : 'w';
+    const topColor = isBottomBlack ? 'w' : 'b';
 
-    if (isOnlineMatch) {
-      myTime = (onlineMyColor === 'b') ? playerTimeLeft.b : playerTimeLeft.w;
-      oppTime = (onlineMyColor === 'b') ? playerTimeLeft.w : playerTimeLeft.b;
-    } else {
-      const isBoardFlipped = boardContainerEl && boardContainerEl.classList.contains('flipped');
-      if (isBoardFlipped) {
-        myTime = playerTimeLeft.b;
-        oppTime = playerTimeLeft.w;
-      }
-    }
+    const myTime = playerTimeLeft[bottomColor];
+    const oppTime = playerTimeLeft[topColor];
 
     if (clockBottom) clockBottom.innerHTML = formatClockDisplay(myTime);
     if (clockTop) clockTop.innerHTML = formatClockDisplay(oppTime);
@@ -2249,6 +2275,7 @@
   }
 
   function startNewGame(playSound = true) {
+    lastRenderedBottomColor = null;
     currentReviewData = null;
     isReviewModeActive = false;
     if (moveReviewBanner) moveReviewBanner.style.display = 'none';

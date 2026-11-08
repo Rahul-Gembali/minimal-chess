@@ -123,27 +123,38 @@ async function run() {
   }
 
   try {
-    await sleep(800);
-    console.log('1. Checking initial White turn orientation...');
+    for (let i = 0; i < 20; i++) {
+      const ready = await evalJs(`Boolean(document.getElementById('player-top') && document.getElementById('player-bottom'))`);
+      if (ready) break;
+      await sleep(200);
+    }
+    console.log('1. Checking initial White turn state...');
     const initialStatus = await evalJs(`
       (() => {
         const top = document.getElementById('player-top');
         const bottom = document.getElementById('player-bottom');
+        const nameTop = document.getElementById('name-top')?.textContent;
+        const nameBottom = document.getElementById('name-bottom')?.textContent;
         const topStyle = window.getComputedStyle(top);
         const bottomStyle = window.getComputedStyle(bottom);
+        const activeTurn = document.querySelector('.player-card.active-turn')?.id;
         return {
-          topHasClass: top.classList.contains('facing-black-perspective'),
-          bottomHasClass: bottom.classList.contains('facing-black-perspective'),
+          nameTop,
+          nameBottom,
+          activeTurn,
           topTransform: topStyle.transform,
           bottomTransform: bottomStyle.transform
         };
       })()
     `);
     console.log('Initial state:', initialStatus);
-    if (initialStatus.topHasClass || initialStatus.bottomHasClass) {
-      throw new Error('Cards should not have facing-black-perspective on White turn');
+    if (initialStatus.nameBottom !== 'White' || initialStatus.nameTop !== 'Black') {
+      throw new Error(`Expected White at bottom and Black at top, got: bottom=${initialStatus.nameBottom}, top=${initialStatus.nameTop}`);
     }
-    await takeShot('tests_screen_1_white_turn.png');
+    if (initialStatus.topTransform.includes('matrix(-1') || initialStatus.bottomTransform.includes('matrix(-1')) {
+      throw new Error('Rotation detected! Cards must NEVER rotate on Z-axis');
+    }
+    await takeShot('test_zero_rot_1_white_turn.png');
 
     console.log('2. Executing White move e4...');
     await evalJs(`
@@ -155,34 +166,40 @@ async function run() {
       })()
     `);
 
-    await sleep(700);
+    await sleep(600);
 
-    console.log('3. Checking Black turn orientation (BOTH cards must rotate to Black perspective)...');
+    console.log('3. Checking Black turn state (Names flipped smoothly without any rotation)...');
     const blackTurnStatus = await evalJs(`
       (() => {
         const top = document.getElementById('player-top');
         const bottom = document.getElementById('player-bottom');
+        const nameTop = document.getElementById('name-top')?.textContent;
+        const nameBottom = document.getElementById('name-bottom')?.textContent;
         const topStyle = window.getComputedStyle(top);
         const bottomStyle = window.getComputedStyle(bottom);
         const activeTurn = document.querySelector('.player-card.active-turn')?.id;
         return {
+          nameTop,
+          nameBottom,
           activeTurn,
-          topHasClass: top.classList.contains('facing-black-perspective'),
-          bottomHasClass: bottom.classList.contains('facing-black-perspective'),
           topTransform: topStyle.transform,
-          bottomTransform: bottomStyle.transform,
-          topTransition: topStyle.transition
+          bottomTransform: bottomStyle.transform
         };
       })()
     `);
     console.log('Black turn state:', blackTurnStatus);
 
-    if (!blackTurnStatus.topHasClass || !blackTurnStatus.bottomHasClass) {
-      throw new Error('BOTH cards must have facing-black-perspective on Black turn!');
+    if (blackTurnStatus.nameBottom !== 'Black' || blackTurnStatus.nameTop !== 'White') {
+      throw new Error(`Names should have flipped to Black at bottom, got: bottom=${blackTurnStatus.nameBottom}, top=${blackTurnStatus.nameTop}`);
     }
-    console.log('✓ BOTH cards have .facing-black-perspective on Black turn!');
+    if (blackTurnStatus.topTransform.includes('matrix(-1') || blackTurnStatus.bottomTransform.includes('matrix(-1') ||
+        blackTurnStatus.topTransform.includes('rotate') || blackTurnStatus.bottomTransform.includes('rotate')) {
+      throw new Error('Rotation detected on Black turn! Cards must remain horizontal without spinning over chessboard.');
+    }
+    console.log('✓ Names flipped: Active player Black is at bottom, opponent White is at top!');
+    console.log('✓ ZERO rotation confirmed on both cards! Pure horizontal placement.');
 
-    await takeShot('tests_screen_2_black_turn_rotated.png');
+    await takeShot('test_zero_rot_2_black_turn.png');
 
     console.log('4. Executing Black move e5...');
     await evalJs(`
@@ -194,20 +211,22 @@ async function run() {
       })()
     `);
 
-    await sleep(700);
+    await sleep(600);
 
-    console.log('5. Checking White turn orientation (BOTH cards rotate back to White perspective)...');
+    console.log('5. Checking White turn state (Names smoothly flipped back to White at bottom)...');
     const returnWhiteStatus = await evalJs(`
       (() => {
         const top = document.getElementById('player-top');
         const bottom = document.getElementById('player-bottom');
+        const nameTop = document.getElementById('name-top')?.textContent;
+        const nameBottom = document.getElementById('name-bottom')?.textContent;
         const topStyle = window.getComputedStyle(top);
         const bottomStyle = window.getComputedStyle(bottom);
         const activeTurn = document.querySelector('.player-card.active-turn')?.id;
         return {
+          nameTop,
+          nameBottom,
           activeTurn,
-          topHasClass: top.classList.contains('facing-black-perspective'),
-          bottomHasClass: bottom.classList.contains('facing-black-perspective'),
           topTransform: topStyle.transform,
           bottomTransform: bottomStyle.transform
         };
@@ -215,14 +234,18 @@ async function run() {
     `);
     console.log('Returned White turn state:', returnWhiteStatus);
 
-    if (returnWhiteStatus.topHasClass || returnWhiteStatus.bottomHasClass) {
-      throw new Error('BOTH cards must have facing-black-perspective removed on White turn!');
+    if (returnWhiteStatus.nameBottom !== 'White' || returnWhiteStatus.nameTop !== 'Black') {
+      throw new Error(`Names should have flipped back to White at bottom, got: bottom=${returnWhiteStatus.nameBottom}, top=${returnWhiteStatus.nameTop}`);
     }
-    console.log('✓ BOTH cards smoothly returned to White perspective (0 degrees)!');
+    if (returnWhiteStatus.topTransform.includes('matrix(-1') || returnWhiteStatus.bottomTransform.includes('matrix(-1')) {
+      throw new Error('Rotation detected! Cards must remain horizontal without spinning.');
+    }
+    console.log('✓ Names flipped back smoothly to White at bottom!');
+    console.log('✓ ZERO rotation confirmed!');
 
-    await takeShot('tests_screen_3_white_turn_returned.png');
+    await takeShot('test_zero_rot_3_white_turn.png');
 
-    console.log('--- ALL PERSPECTIVE ROTATION TESTS PASSED 100% ---');
+    console.log('--- ALL ZERO-ROTATION NAME FLIP TESTS PASSED 100% ---');
   } catch (err) {
     console.error('Test failed:', err);
     process.exitCode = 1;
